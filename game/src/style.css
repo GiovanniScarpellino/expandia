@@ -28,6 +28,12 @@ canvas {
   border-radius: 5px;
 }
 
+#hud a{
+  text-decoration: none;
+  color: wheat;
+  margin-bottom: 15px;
+}
+
 #hud div {
   margin-bottom: 5px;
 }
