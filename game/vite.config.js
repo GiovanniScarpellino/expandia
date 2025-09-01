@@ -2,7 +2,7 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: 'https://giovanniscarpellino.github.io/expandia',
+  base: process.env.NODE_ENV === 'production' ? 'https://giovanniscarpellino.github.io/expandia' : '/',
   build: {
     rollupOptions: {
       input: {
