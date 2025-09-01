@@ -9,6 +9,11 @@ let wood = 0;
 let stone = 0;
 const woodDiv = document.getElementById('wood');
 const stoneDiv = document.getElementById('stone');
+const healthDiv = document.getElementById('health');
+
+// Player
+let playerHealth = 100;
+const playerAttackDamage = 10;
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -35,6 +40,22 @@ scene.add(base);
 const npcs = [];
 const npcCost = { wood: 10, stone: 10 };
 const npcSpeed = 0.05;
+
+// Enemies
+const enemies = [];
+const enemySpeed = 0.06;
+const enemyAttackDamage = 5;
+
+function createEnemy(position) {
+    const enemyGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // red
+    const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+    enemy.position.copy(position);
+    enemy.castShadow = true;
+    enemy.userData = { hp: 100, lastAttackTime: 0 };
+    scene.add(enemy);
+    enemies.push(enemy);
+}
 
 // Resources
 const resources = [];
@@ -101,6 +122,9 @@ function createTile(x, z, unlocked = false) {
         }
         if (Math.random() < 0.1) { // 10% chance to spawn a rock
             createResource('rock', new THREE.Vector3(tile.position.x, -0.2, tile.position.z));
+        }
+        if (Math.random() < 0.05) { // 5% chance to spawn an enemy
+            createEnemy(new THREE.Vector3(tile.position.x, 0, tile.position.z));
         }
     }
 
@@ -215,6 +239,21 @@ function animate() {
       }
   });
 
+  // Enemy AI
+    enemies.forEach((enemy, index) => {
+        const distanceToPlayer = enemy.position.distanceTo(playerCube.position);
+        if (distanceToPlayer < 5) { // Aggro range
+            const direction = new THREE.Vector3().subVectors(playerCube.position, enemy.position).normalize();
+            enemy.position.add(direction.multiplyScalar(enemySpeed));
+
+            if (distanceToPlayer < 1 && now - enemy.userData.lastAttackTime > 1000) { // Attack range and cooldown
+                playerHealth -= enemyAttackDamage;
+                healthDiv.innerText = `Health: ${playerHealth}`;
+                enemy.userData.lastAttackTime = now;
+            }
+        }
+    });
+
 
   // Player movement
   const nextPosition = playerCube.position.clone();
@@ -249,6 +288,26 @@ document.addEventListener('keydown', (event) => {
   if (event.key in keys) {
     event.preventDefault();
     keys[event.key] = true;
+  }
+
+  if (event.key === 'f') { // 'f' to attack
+      let closestEnemy = null;
+      let minDistance = Infinity;
+      enemies.forEach(enemy => {
+          const distance = playerCube.position.distanceTo(enemy.position);
+          if (distance < minDistance) {
+              minDistance = distance;
+              closestEnemy = enemy;
+          }
+      });
+
+      if (closestEnemy && minDistance < 1.5) {
+          closestEnemy.userData.hp -= playerAttackDamage;
+          if (closestEnemy.userData.hp <= 0) {
+              scene.remove(closestEnemy);
+              enemies.splice(enemies.indexOf(closestEnemy), 1);
+          }
+      }
   }
 
   if (event.key === ' ') { // Space bar to harvest
