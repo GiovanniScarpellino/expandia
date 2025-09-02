@@ -6,14 +6,15 @@ export class Player {
         this.scene = scene;
         this.canMoveTo = canMoveTo;
         this.health = 100;
-        this.attackDamage = 10;
+        this.postureAttackDamage = 35; // New: damage to posture
+        this.ruptureAttackDamage = 100; // New: damage to health when enemy is broken
         
-        this.walkSpeed = 0.02; // Base walking speed
-        this.sprintSpeed = 0.05; // Sprint speed
-        this.currentSpeed = 0; // Current actual speed
-        this.targetSpeed = 0; // Desired speed
-        this.acceleration = 0.005; // How fast to accelerate
-        this.deceleration = 0.01; // How fast to decelerate
+        this.walkSpeed = 0.02;
+        this.sprintSpeed = 0.05;
+        this.currentSpeed = 0;
+        this.targetSpeed = 0;
+        this.acceleration = 0.005;
+        this.deceleration = 0.01;
         
         this.mixer = null;
         this.actions = {};
@@ -52,6 +53,9 @@ export class Player {
 
             this.mixer = new THREE.AnimationMixer(this.mesh);
 
+            // Log animations for debugging
+            console.log('Available animations:', gltf.animations.map(a => a.name));
+
             const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'idle');
             const runClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
             const attackClip = THREE.AnimationClip.findByName(gltf.animations, 'attack-melee-right');
@@ -61,14 +65,7 @@ export class Player {
                 this.activeAction = this.actions['idle'];
                 this.activeAction.play();
             } else {
-                console.warn("Animation 'idle' not found. Trying to use first animation as fallback.");
-                if (gltf.animations.length > 0) {
-                    this.actions['idle'] = this.mixer.clipAction(gltf.animations[0]);
-                    this.activeAction = this.actions['idle'];
-                    this.activeAction.play();
-                } else {
-                    console.error("No animations found in the model.");
-                }
+                console.warn("Animation 'idle' not found.");
             }
 
             if (runClip) {
@@ -83,36 +80,65 @@ export class Player {
         });
     }
 
+    playAttack() {
+        const attackAction = this.actions['attack'];
+        if (attackAction && this.activeAction !== attackAction) {
+            attackAction.reset();
+            attackAction.setLoop(THREE.LoopOnce, 1);
+            attackAction.clampWhenFinished = true;
+            this.activeAction.crossFadeTo(attackAction, 0.1, true);
+            attackAction.play();
+            this.activeAction = attackAction;
+        }
+    }
+
     update(delta) {
-        if (this.mixer) {
-            this.mixer.update(delta);
+        if (!this.mixer) return;
 
-            const isMoving = this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
-                
-            // Determine target speed
-            if (isMoving) {
-                this.targetSpeed = this.walkSpeed;
-            } else {
-                this.targetSpeed = 0;
-            }
+        this.mixer.update(delta);
 
-            // Smoothly interpolate current speed
-            if (this.currentSpeed < this.targetSpeed) {
-                this.currentSpeed += this.acceleration * delta * 60; // Multiply by 60 for frame-rate independence
-                if (this.currentSpeed > this.targetSpeed) this.currentSpeed = this.targetSpeed;
-            } else if (this.currentSpeed > this.targetSpeed) {
-                this.currentSpeed -= this.deceleration * delta * 60;
-                if (this.currentSpeed < this.targetSpeed) this.currentSpeed = this.targetSpeed;
-            }
+        const attackAction = this.actions['attack'];
 
-            const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['run'] : this.actions['idle'];
+        // If attack is playing and has finished, transition back to idle
+        if (this.activeAction === attackAction && !attackAction.isRunning()) {
+            const idleAction = this.actions['idle'];
+            idleAction.reset();
+            idleAction.play();
+            this.activeAction.crossFadeTo(idleAction, 0.2, true);
+            this.activeAction = idleAction;
+        }
 
-            if (this.activeAction && targetAction && this.activeAction !== targetAction) {
-                targetAction.reset();
-                targetAction.play();
-                this.activeAction.crossFadeTo(targetAction, 0.05, true);
-                this.activeAction = targetAction;
-            }
+        // Do not handle movement if an attack is playing
+        if (this.activeAction === attackAction) {
+             // While attacking, we might want to halt movement
+            this.currentSpeed = 0;
+            return; // Skip movement logic
+        }
+
+        // --- Movement Logic ---
+        const isMoving = this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
+            
+        if (isMoving) {
+            this.targetSpeed = this.walkSpeed;
+        } else {
+            this.targetSpeed = 0;
+        }
+
+        if (this.currentSpeed < this.targetSpeed) {
+            this.currentSpeed += this.acceleration * delta * 60;
+            if (this.currentSpeed > this.targetSpeed) this.currentSpeed = this.targetSpeed;
+        } else if (this.currentSpeed > this.targetSpeed) {
+            this.currentSpeed -= this.deceleration * delta * 60;
+            if (this.currentSpeed < this.targetSpeed) this.currentSpeed = this.targetSpeed;
+        }
+
+        const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['run'] : this.actions['idle'];
+
+        if (this.activeAction !== targetAction) {
+            targetAction.reset();
+            targetAction.play();
+            this.activeAction.crossFadeTo(targetAction, 0.05, true);
+            this.activeAction = targetAction;
         }
 
         const direction = new THREE.Vector3();
@@ -127,7 +153,7 @@ export class Player {
             this.mesh.rotation.y = angle;
 
             const nextPosition = this.mesh.position.clone();
-            nextPosition.add(direction.multiplyScalar(this.currentSpeed)); // Use currentSpeed
+            nextPosition.add(direction.multiplyScalar(this.currentSpeed));
 
             if (this.canMoveTo(nextPosition)) {
                 this.mesh.position.copy(nextPosition);

@@ -51,11 +51,11 @@ export class Game {
             this.enemyManager.load(),
         ];
 
-        const [baseModel] = await Promise.all([baseModelPromise, ...loadPromises]);
+        const [baseGltf] = await Promise.all([baseModelPromise, ...loadPromises]);
         
         this.world = new World(this.scene, this.resourceManager, this.enemyManager);
         
-        this.base = baseModel;
+        this.base = baseGltf.scene;
         this.base.scale.set(0.5, 0.5, 0.5);
         this.base.position.set(0, this.world.yOffset, -2);
         this.base.rotation.y = Math.PI / 2;
@@ -122,6 +122,8 @@ export class Game {
     }
 
     playerAttack() {
+        this.player.playAttack();
+
         let closestEnemy = null;
         let minDistance = Infinity;
         this.enemyManager.enemies.forEach(enemy => {
@@ -133,8 +135,12 @@ export class Game {
         });
 
         if (closestEnemy && minDistance < 1.5) {
-            if (closestEnemy.takeDamage(this.player.attackDamage)) {
-                this.enemyManager.removeEnemy(closestEnemy);
+            if (closestEnemy.isBroken) {
+                // Enemy is broken, deal health damage
+                closestEnemy.takeDamage(this.player.ruptureAttackDamage);
+            } else {
+                // Enemy is not broken, deal posture damage
+                closestEnemy.takePostureDamage(this.player.postureAttackDamage);
             }
         }
     }
@@ -197,7 +203,7 @@ export class Game {
 
         this.player.update(delta);
         if (this.resourceManager) this.resourceManager.update();
-        if (this.enemyManager) this.enemyManager.update(this.player);
+        if (this.enemyManager) this.enemyManager.update(this.player, delta);
         if (this.npcManager) this.npcManager.update(this.resourceManager.resources, this);
         
         this.ui.updateHealth(this.player.health);

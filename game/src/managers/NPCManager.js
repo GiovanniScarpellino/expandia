@@ -8,11 +8,13 @@ export class NPCManager {
         this.npcCost = { wood: 10, stone: 10 };
         this.basePosition = basePosition;
         this.model = null;
+        this.animations = null;
     }
 
     load() {
-        return this.modelLoader.load('/src/models/character-a.glb').then(model => {
-            this.model = model;
+        return this.modelLoader.load('/src/models/character-a.glb').then(gltf => {
+            this.model = gltf.scene;
+            this.animations = gltf.animations;
         });
     }
 
@@ -20,7 +22,7 @@ export class NPCManager {
         if (this.model) {
             const npcPosition = this.basePosition.clone();
             npcPosition.y = -0.35; // Adjust y to be on the ground
-            const npc = new NPC(this.scene, npcPosition, this.model.clone());
+            const npc = new NPC(this.scene, npcPosition, this.model.clone(), this.animations);
             this.npcs.push(npc);
         }
     }

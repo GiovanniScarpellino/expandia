@@ -38,7 +38,7 @@ export class ResourceManager {
         }
 
         if (model) {
-            const resource = new Resource(this.scene, type, position, model.clone());
+            const resource = new Resource(this.scene, type, position, model.scene.clone());
             this.resources.push(resource);
             return resource;
         }

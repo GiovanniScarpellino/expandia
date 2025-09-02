@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export class NPC {
-    constructor(scene, position, model) {
+    constructor(scene, position, model, animations) {
         this.scene = scene;
         this.mesh = model;
         this.mesh.position.copy(position);
