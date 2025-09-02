@@ -6,55 +6,88 @@ import { ResourceManager } from './managers/ResourceManager.js';
 import { EnemyManager } from './managers/EnemyManager.js';
 import { NPCManager } from './managers/NPCManager.js';
 import { InputHandler } from './InputHandler.js';
+import { ModelLoader } from './utils/ModelLoader.js';
 
 export class Game {
     constructor() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
+        this.scene.background = new THREE.Color(0x262626);
 
         this.clock = new THREE.Clock();
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.cameraOffset = new THREE.Vector3(0, 1.5, 2.5);
+        this.cameraOffset = new THREE.Vector3(0, .75, .75);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(this.renderer.domElement);
+        document.body.appendChild(this.renderer.domElement)
 
         this.wood = 0;
         this.stone = 0;
 
         this.ui = new UI();
-        this.enemyManager = new EnemyManager(this.scene);
-        this.resourceManager = new ResourceManager(this.scene);
-        this.world = new World(this.scene, this.resourceManager, this.enemyManager);
-        this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos));
+        const modelLoader = new ModelLoader();
         
-        const baseGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 });
-        this.base = new THREE.Mesh(baseGeometry, baseMaterial);
-        this.base.position.set(0, 0, -2);
-        this.base.castShadow = true;
-        this.scene.add(this.base);
-
-        this.npcManager = new NPCManager(this.scene, this.base.position);
+        this.resourceManager = new ResourceManager(this.scene, modelLoader);
+        this.enemyManager = new EnemyManager(this.scene, modelLoader);
+        
+        this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos));
         this.inputHandler = new InputHandler(this);
-
+        
         this.setupLights();
-
+        
         window.addEventListener('resize', () => this.onWindowResize());
     }
 
-    setupLights() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        this.scene.add(ambientLight);
+    async init() {
+        const modelLoader = new ModelLoader();
+        const baseModelPromise = modelLoader.load('/src/models/blade.glb');
+        const loadPromises = [
+            this.resourceManager.load(),
+            this.enemyManager.load(),
+        ];
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 10, 7.5);
+        const [baseModel] = await Promise.all([baseModelPromise, ...loadPromises]);
+        
+        this.world = new World(this.scene, this.resourceManager, this.enemyManager);
+        
+        this.base = baseModel;
+        this.base.scale.set(0.5, 0.5, 0.5);
+        this.base.position.set(0, this.world.yOffset, -2);
+        this.base.rotation.y = Math.PI / 2;
+        this.base.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        this.scene.add(this.base);
+
+        this.npcManager = new NPCManager(this.scene, this.base.position, modelLoader);
+        await this.npcManager.load();
+
+        this.animate();
+    }
+
+    setupLights() {
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(10, 10, 5);
         directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -20;
+        directionalLight.shadow.camera.right = 20;
+        directionalLight.shadow.camera.top = 20;
+        directionalLight.shadow.camera.bottom = -20;
         this.scene.add(directionalLight);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        this.scene.add(ambient);
     }
     
     addResource(type, amount) {
@@ -138,9 +171,8 @@ export class Game {
         }
     }
 
-
     start() {
-        this.animate();
+        this.init();
     }
 
     animate() {
@@ -149,9 +181,9 @@ export class Game {
         const delta = this.clock.getDelta();
 
         this.player.update(delta);
-        this.resourceManager.update();
-        this.enemyManager.update(this.player);
-        this.npcManager.update(this.resourceManager.resources, this);
+        if (this.resourceManager) this.resourceManager.update();
+        if (this.enemyManager) this.enemyManager.update(this.player);
+        if (this.npcManager) this.npcManager.update(this.resourceManager.resources, this);
         
         this.ui.updateHealth(this.player.health);
 

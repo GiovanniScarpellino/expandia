@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class Player {
     constructor(scene, canMoveTo) {
@@ -7,7 +7,7 @@ export class Player {
         this.canMoveTo = canMoveTo;
         this.health = 100;
         this.attackDamage = 10;
-        this.moveSpeed = 0.04;
+        this.moveSpeed = 0.02;
         
         this.mixer = null;
         this.actions = {};
@@ -28,45 +28,52 @@ export class Player {
             ArrowRight: false,
         };
 
-        const loadModel = (url) => {
-            return new Promise((resolve, reject) => {
-                new FBXLoader().load(url, resolve, undefined, reject);
-            });
-        };
-
-        Promise.all([
-            loadModel('/src/models/character.fbx'),
-            loadModel('/src/models/idle.fbx'),
-            loadModel('/src/models/run.fbx')
-        ]).then(([character, idleAnim, runAnim]) => {
-            this.scene.remove(this.mesh); // remove placeholder
-            this.mesh = character;
+        new GLTFLoader().load('/src/models/character-a.glb', (gltf) => {
+            this.scene.remove(this.mesh);
+            this.mesh = gltf.scene;
             
-            this.mesh.scale.set(0.001, 0.001, 0.001);
+            this.mesh.scale.set(0.1, 0.1, 0.1);
             this.mesh.position.set(0, -0.5, 0);
 
             this.mesh.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
                 }
             });
+
             this.scene.add(this.mesh);
 
             this.mixer = new THREE.AnimationMixer(this.mesh);
 
-            const idleAction = this.mixer.clipAction(idleAnim.animations[0]);
-            this.actions['idle'] = idleAction;
+            const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'idle');
+            const runClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
+            const attackClip = THREE.AnimationClip.findByName(gltf.animations, 'attack-melee-right');
 
-            const runAction = this.mixer.clipAction(runAnim.animations[0]);
-            this.actions['run'] = runAction;
+            if (idleClip) {
+                this.actions['idle'] = this.mixer.clipAction(idleClip);
+                this.activeAction = this.actions['idle'];
+                this.activeAction.play();
+            } else {
+                console.warn("Animation 'idle' not found. Trying to use first animation as fallback.");
+                if (gltf.animations.length > 0) {
+                    this.actions['idle'] = this.mixer.clipAction(gltf.animations[0]);
+                    this.activeAction = this.actions['idle'];
+                    this.activeAction.play();
+                } else {
+                    console.error("No animations found in the model.");
+                }
+            }
 
-            this.activeAction = this.actions['idle'];
-            this.activeAction.play();
+            if (runClip) {
+                this.actions['run'] = this.mixer.clipAction(runClip);
+            }
+            if(attackClip){
+                this.actions['attack'] = this.mixer.clipAction(attackClip);
+            }
 
-        }).catch(error => {
-            console.error("Error loading player models/animations:", error);
+        }, undefined, (error) => {
+            console.error("Error loading player model:", error);
         });
     }
 
@@ -85,14 +92,23 @@ export class Player {
             }
         }
 
-        const nextPosition = this.mesh.position.clone();
-        if (this.keys.ArrowUp) nextPosition.z -= this.moveSpeed;
-        if (this.keys.ArrowDown) nextPosition.z += this.moveSpeed;
-        if (this.keys.ArrowLeft) nextPosition.x -= this.moveSpeed;
-        if (this.keys.ArrowRight) nextPosition.x += this.moveSpeed;
+        const direction = new THREE.Vector3();
+        if (this.keys.ArrowUp) direction.z -= 1;
+        if (this.keys.ArrowDown) direction.z += 1;
+        if (this.keys.ArrowLeft) direction.x -= 1;
+        if (this.keys.ArrowRight) direction.x += 1;
 
-        if (this.canMoveTo(nextPosition)) {
-            this.mesh.position.copy(nextPosition);
+        if (direction.lengthSq() > 0) {
+            direction.normalize();
+            const angle = Math.atan2(direction.x, direction.z);
+            this.mesh.rotation.y = angle;
+
+            const nextPosition = this.mesh.position.clone();
+            nextPosition.add(direction.multiplyScalar(this.moveSpeed));
+
+            if (this.canMoveTo(nextPosition)) {
+                this.mesh.position.copy(nextPosition);
+            }
         }
     }
 

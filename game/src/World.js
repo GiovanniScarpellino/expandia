@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export class World {
+    yOffset = -0.5;
+
     constructor(scene, resourceManager, enemyManager) {
         this.scene = scene;
         this.resourceManager = resourceManager;
@@ -16,8 +18,8 @@ export class World {
         this.createTile(1, 0, false);
         this.createTile(-1, 0, false);
 
-        this.resourceManager.createResource('tree', new THREE.Vector3(0.5, -0.25, 0.5));
-        this.resourceManager.createResource('rock', new THREE.Vector3(-0.5, -0.3, 0.5));
+        this.resourceManager.createResource('tree', new THREE.Vector3(0.5, this.yOffset, 0.5));
+        this.resourceManager.createResource('rock', new THREE.Vector3(-0.5, this.yOffset, 0.5));
     }
 
     getTileKey(x, z) {
@@ -45,7 +47,7 @@ export class World {
         const tileGeometry = new THREE.PlaneGeometry(this.tileSize, this.tileSize);
         const tile = new THREE.Mesh(tileGeometry, unlocked ? this.unlockedMaterial : this.lockedMaterial);
         tile.rotation.x = -Math.PI / 2;
-        tile.position.set(x * this.tileSize, -0.5, z * this.tileSize);
+        tile.position.set(x * this.tileSize, this.yOffset, z * this.tileSize);
         tile.receiveShadow = true;
         tile.userData = { unlocked, x, z };
         this.scene.add(tile);
@@ -53,10 +55,10 @@ export class World {
 
         if (!unlocked) {
             if (Math.random() < 0.2) {
-                this.resourceManager.createResource('tree', new THREE.Vector3(tile.position.x, -0.25, tile.position.z));
+                this.resourceManager.createResource('tree', new THREE.Vector3(tile.position.x, this.yOffset, tile.position.z));
             }
             if (Math.random() < 0.1) {
-                this.resourceManager.createResource('rock', new THREE.Vector3(tile.position.x, -0.3, tile.position.z));
+                this.resourceManager.createResource('rock', new THREE.Vector3(tile.position.x, this.yOffset, tile.position.z));
             }
             if (Math.random() < 0.05) {
                 this.enemyManager.createEnemy(new THREE.Vector3(tile.position.x, -0.2, tile.position.z));

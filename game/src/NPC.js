@@ -1,13 +1,20 @@
 import * as THREE from 'three';
 
 export class NPC {
-    constructor(scene, position) {
+    constructor(scene, position, model) {
         this.scene = scene;
-        const npcGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-        const npcMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // white
-        this.mesh = new THREE.Mesh(npcGeometry, npcMaterial);
+        this.mesh = model;
         this.mesh.position.copy(position);
-        this.mesh.castShadow = true;
+        this.mesh.scale.set(0.1, 0.1, 0.1);
+
+        this.mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.material = child.material.clone();
+                child.material.color.setHex(0x0000ff);
+            }
+        });
+
         this.mesh.userData = { state: 'IDLE', target: null };
         this.scene.add(this.mesh);
         this.speed = 0.05;

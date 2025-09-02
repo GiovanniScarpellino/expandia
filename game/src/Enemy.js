@@ -1,13 +1,20 @@
 import * as THREE from 'three';
 
 export class Enemy {
-    constructor(scene, position) {
+    constructor(scene, position, model) {
         this.scene = scene;
-        const enemyGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-        const enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // red
-        this.mesh = new THREE.Mesh(enemyGeometry, enemyMaterial);
+        this.mesh = model;
         this.mesh.position.copy(position);
-        this.mesh.castShadow = true;
+        this.mesh.scale.set(0.1, 0.1, 0.1);
+
+        this.mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.material = child.material.clone();
+                child.material.color.setHex(0xff0000);
+            }
+        });
+        
         this.mesh.userData = { hp: 100, lastAttackTime: 0 };
         this.scene.add(this.mesh);
 

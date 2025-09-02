@@ -1,14 +1,24 @@
 import { Enemy } from '../Enemy.js';
 
 export class EnemyManager {
-    constructor(scene) {
+    constructor(scene, modelLoader) {
         this.scene = scene;
+        this.modelLoader = modelLoader;
         this.enemies = [];
+        this.model = null;
+    }
+
+    load() {
+        return this.modelLoader.load('/src/models/character-a.glb').then(model => {
+            this.model = model;
+        });
     }
 
     createEnemy(position) {
-        const enemy = new Enemy(this.scene, position);
-        this.enemies.push(enemy);
+        if (this.model) {
+            const enemy = new Enemy(this.scene, position, this.model.clone());
+            this.enemies.push(enemy);
+        }
     }
 
     update(player) {
