@@ -11,10 +11,6 @@ export class InputHandler {
             this.game.player.keys[event.key] = true;
         }
 
-        if (event.key === 'Shift') {
-            this.game.player.keys.ShiftLeft = true;
-        }
-
         if (event.key === 'f') { // Attack
             this.game.playerAttack();
         }
@@ -36,10 +32,6 @@ export class InputHandler {
         if (event.key in this.game.player.keys) {
             event.preventDefault();
             this.game.player.keys[event.key] = false;
-        }
-
-        if (event.key === 'ShiftLeft') {
-            this.game.player.keys.ShiftLeft = false;
         }
     }
 }

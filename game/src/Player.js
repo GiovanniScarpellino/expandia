@@ -12,8 +12,8 @@ export class Player {
         this.sprintSpeed = 0.05; // Sprint speed
         this.currentSpeed = 0; // Current actual speed
         this.targetSpeed = 0; // Desired speed
-        this.acceleration = 0.0005; // How fast to accelerate
-        this.deceleration = 0.001; // How fast to decelerate
+        this.acceleration = 0.005; // How fast to accelerate
+        this.deceleration = 0.01; // How fast to decelerate
         
         this.mixer = null;
         this.actions = {};
@@ -32,7 +32,6 @@ export class Player {
             ArrowDown: false,
             ArrowLeft: false,
             ArrowRight: false,
-            ShiftLeft: false,
         };
 
         new GLTFLoader().load('/src/models/character-a.glb', (gltf) => {
@@ -92,7 +91,7 @@ export class Player {
                 
             // Determine target speed
             if (isMoving) {
-                this.targetSpeed = this.keys.ShiftLeft ? this.sprintSpeed : this.walkSpeed;
+                this.targetSpeed = this.walkSpeed;
             } else {
                 this.targetSpeed = 0;
             }
@@ -111,7 +110,7 @@ export class Player {
             if (this.activeAction && targetAction && this.activeAction !== targetAction) {
                 targetAction.reset();
                 targetAction.play();
-                this.activeAction.crossFadeTo(targetAction, 0.2, true);
+                this.activeAction.crossFadeTo(targetAction, 0.05, true);
                 this.activeAction = targetAction;
             }
         }
