@@ -7,9 +7,11 @@ export class ModelLoader {
     }
 
     load(url) {
-        if (this.cache.has(url)) {
-            const cachedGltf = this.cache.get(url);
-            // Return a new object with a cloned scene to avoid shared state issues
+        const fullUrl = import.meta.env.BASE_URL === '/' ? url : `${import.meta.env.BASE_URL}${url}`;
+        console.log(fullUrl);
+
+        if (this.cache.has(fullUrl)) {
+            const cachedGltf = this.cache.get(fullUrl);
             return Promise.resolve({
                 ...cachedGltf,
                 scene: cachedGltf.scene.clone()
@@ -17,10 +19,8 @@ export class ModelLoader {
         }
 
         return new Promise((resolve, reject) => {
-            this.loader.load(url, (gltf) => {
-                // Cache the original gltf object
-                this.cache.set(url, gltf);
-                // Return a new object with a cloned scene
+            this.loader.load(fullUrl, (gltf) => {
+                this.cache.set(fullUrl, gltf);
                 resolve({
                     ...gltf,
                     scene: gltf.scene.clone()
@@ -34,7 +34,6 @@ export class ModelLoader {
         return Promise.all(promises).then(gltfs => {
             const modelMap = {};
             urls.forEach((url, index) => {
-                // The promise now resolves with the full gltf object
                 modelMap[url] = gltfs[index];
             });
             return modelMap;

@@ -1,8 +1,19 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? 'https://giovanniscarpellino.github.io/expandia' : '/',
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'src/models/*',
+          dest: 'src/models',
+        },
+      ],
+    }),
+  ],
   build: {
     rollupOptions: {
       input: {
