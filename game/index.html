@@ -118,19 +118,25 @@
 
         <h2>Concept Général</h2>
         <p>
-            C'est un jeu de survie et d'exploration en 3D avec une vue de dessus. Vous contrôlez un cube bleu et devez
+            C'est un jeu de survie et d'exploration en 3D avec une vue de dessus. Vous contrôlez un personnage et devez
             collecter des ressources (bois et pierre) pour étendre votre territoire, vous défendre contre des ennemis et
             automatiser la collecte en achetant des PNJ (Personnages Non-Joueurs).
         </p>
 
         <h2>Contrôles</h2>
+        
+        <h3>Clavier</h3>
         <ul>
             <li><code>Flèches directionnelles</code> : Déplacer le personnage.</li>
-            <li><code>Barre d'espace</code> : Récolter une ressource (arbre ou rocher) si vous êtes assez proche.</li>
-            <li><code>Touche E</code> : Dépenser 1 bois pour débloquer une case de terrain adjacente.</li>
             <li><code>Touche F</code> : Attaquer l'ennemi le plus proche.</li>
-            <li><code>Touche B</code> : Acheter un PNJ (un cube blanc) pour 10 bois et 10 pierres, à condition d'être
-                près de la base (le cube doré).</li>
+            <li><code>Touche E</code> : Action contextuelle (Récolter, Débloquer une tuile, Acheter un PNJ).</li>
+        </ul>
+
+        <h3>Mobile (Tactile)</h3>
+        <ul>
+            <li><code>Joystick virtuel</code> (gauche) : Déplacer le personnage.</li>
+            <li><code>Bouton ⚔️</code> (droite) : Attaquer l'ennemi le plus proche.</li>
+            <li><code>Bouton ✋</code> (droite) : Action contextuelle (Récolter, Débloquer une tuile, Acheter un PNJ).</li>
         </ul>
 
         <h2>Mécaniques Principales</h2>
@@ -138,33 +144,29 @@
         <h3>Mouvement et Exploration</h3>
         <p>
             Le monde est une grille de "tuiles". Vous ne pouvez vous déplacer que sur les tuiles débloquées (vertes). En
-            appuyant sur <code>E</code> près d'une tuile verrouillée (grise), vous la débloquez. Lorsqu'une tuile est
-            débloquée, 4 nouvelles tuiles verrouillées sont générées autour d'elle, ce qui permet d'agrandir le monde.
+            utilisant l'action contextuelle (<code>E</code> ou ✋) près d'une tuile verrouillée (grise), vous la débloquez.
+            Lorsqu'une tuile est débloquée, de nouvelles tuiles verrouillées sont générées autour, ce qui permet d'agrandir le monde.
         </p>
 
         <h3>Collecte de Ressources</h3>
         <p>
-            De nouvelles tuiles peuvent faire apparaître des arbres (source de bois) et des rochers (source de pierre).
-            Vous pouvez récolter ces ressources avec la <code>Barre d'espace</code>. Une fois récoltées, les ressources
-            disparaissent et réapparaissent après un délai de 10 secondes.
+            De nouvelles tuiles peuvent faire apparaître des arbres et des rochers.
+            Vous pouvez récolter ces ressources avec l'action contextuelle (<code>E</code> ou ✋).
         </p>
 
         <h3>Combat</h3>
         <p>
-            Des ennemis (cubes rouges) peuvent apparaître sur les nouvelles tuiles. Si vous vous approchez trop,
-            l'ennemi vous suit pour vous attaquer, ce qui réduit votre vie. Vous pouvez attaquer les ennemis avec la
-            <code>Touche F</code>.
+            Des ennemis (rouges) peuvent apparaître sur les nouvelles tuiles. Si vous vous approchez trop,
+            l'ennemi vous suit pour vous attaquer. Vous pouvez les attaquer avec la touche <code>F</code> ou le bouton ⚔️.
         </p>
 
         <h3>PNJ (NPCs) - Automatisation</h3>
         <p>
-            Vous pouvez acheter des PNJ qui travailleront pour vous. Un PNJ recherche de manière autonome la ressource
-            la plus proche, la récolte, et ajoute les ressources à votre inventaire. Après la récolte, il recommence le
-            cycle.
+            Vous pouvez acheter des PNJ qui travailleront pour vous. Utilisez l'action contextuelle (<code>E</code> ou ✋) près de la base (le cristal doré) pour en acheter un contre 10 bois et 10 pierres.
         </p>
 
         <div class="bottom">
-            <a class="btn" href="/game.html">Jouer !</a>
+            <a class="btn" href="http://giovanniscarpellino.github.io/expandia/game.html">Jouer !</a>
         </div>
     </div>
 </body>
