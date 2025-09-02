@@ -54,7 +54,7 @@ export class Player {
             this.mixer = new THREE.AnimationMixer(this.mesh);
 
             const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'idle');
-            const runClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
+            const walkClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
             const attackClip = THREE.AnimationClip.findByName(gltf.animations, 'attack-melee-right');
             const pickupClip = THREE.AnimationClip.findByName(gltf.animations, 'pick-up');
 
@@ -66,7 +66,7 @@ export class Player {
                 console.warn("Animation 'idle' not found.");
             }
 
-            if (runClip) this.actions['run'] = this.mixer.clipAction(runClip);
+            if (walkClip) this.actions['walk'] = this.mixer.clipAction(walkClip);
             if (attackClip) this.actions['attack'] = this.mixer.clipAction(attackClip);
             if (pickupClip) this.actions['pickup'] = this.mixer.clipAction(pickupClip);
 
@@ -127,7 +127,7 @@ export class Player {
             if (this.currentSpeed < this.targetSpeed) this.currentSpeed = this.targetSpeed;
         }
 
-        const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['run'] : this.actions['idle'];
+        const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['walk'] : this.actions['idle'];
 
         if (this.activeAction !== targetAction) {
             this.playAction(targetAction.getClip().name, false);

@@ -28,10 +28,12 @@ export class Enemy {
         const walkClip = THREE.AnimationClip.findByName(animations, 'walk');
         const idleClip = THREE.AnimationClip.findByName(animations, 'idle');
         const dieClip = THREE.AnimationClip.findByName(animations, 'die');
+        const attackClip = THREE.AnimationClip.findByName(animations, 'attack-melee-right');
 
         if (idleClip) this.actions['idle'] = this.mixer.clipAction(idleClip);
         if (walkClip) this.actions['walk'] = this.mixer.clipAction(walkClip);
         if (dieClip) this.actions['die'] = this.mixer.clipAction(dieClip);
+        if (attackClip) this.actions['attack'] = this.mixer.clipAction(attackClip);
         
         this.setActiveAction(this.actions['idle']);
 
@@ -51,17 +53,27 @@ export class Enemy {
         this.speed = 0.01; // Reduced speed for more realistic animation sync
         this.aggroRange = 5;
         this.attackRange = 1;
-        this.attackCooldown = 1000; // 1 second
+        this.attackCooldown = 1500; // 1.5 seconds
         this.lastAttackTime = 0;
     }
 
-    setActiveAction(action) {
-        if (this.activeAction === action) return;
+    setActiveAction(actionName, loopOnce = false) {
+        const action = this.actions[actionName];
+        if (this.activeAction === action || !action) return;
+
         if (this.activeAction) {
             this.activeAction.fadeOut(0.2);
         }
+        
         this.activeAction = action;
-        this.activeAction.reset().fadeIn(0.2).play();
+        this.activeAction.reset();
+
+        if (loopOnce) {
+            this.activeAction.setLoop(THREE.LoopOnce, 1);
+            this.activeAction.clampWhenFinished = true;
+        }
+
+        this.activeAction.fadeIn(0.2).play();
     }
 
     update(player, delta) {
@@ -69,43 +81,49 @@ export class Enemy {
             this.mixer.update(delta);
         }
 
+        const dieAction = this.actions['die'];
         if (this.isDying) {
-            if (!this.actions['die'].isRunning()) {
+            if (dieAction && !dieAction.isRunning()) {
                 this.isReadyToBeRemoved = true;
             }
             return;
         }
 
-        if (this.isBroken) {
-            this.setActiveAction(this.actions['idle']);
-            return;
+        const attackAction = this.actions['attack'];
+        if (this.activeAction === attackAction && !attackAction.isRunning()) {
+            this.setActiveAction('idle');
+        }
+
+        if (this.isBroken || (this.activeAction === attackAction && attackAction.isRunning())) {
+            if(this.isBroken) this.setActiveAction('idle');
+            return; // Don't move or do anything else while broken or attacking
         }
 
         const distanceToPlayer = this.mesh.position.distanceTo(player.mesh.position);
 
         if (distanceToPlayer < this.aggroRange) {
             const direction = new THREE.Vector3().subVectors(player.mesh.position, this.mesh.position);
-            
-            // Look at player
             const angle = Math.atan2(direction.x, direction.z);
             this.mesh.rotation.y = angle;
 
-            // Move towards player if not in attack range
             if (distanceToPlayer > this.attackRange) {
                 direction.normalize();
                 this.mesh.position.add(direction.multiplyScalar(this.speed));
-                this.setActiveAction(this.actions['walk']);
+                this.setActiveAction('walk');
             } else {
-                // In attack range
-                this.setActiveAction(this.actions['idle']); // Or an attack animation
                 const now = Date.now();
                 if (now - this.lastAttackTime > this.attackCooldown) {
+                    this.setActiveAction('attack', true);
                     player.takeDamage(this.attackDamage);
                     this.lastAttackTime = now;
+                } else {
+                    if (this.activeAction !== this.actions['attack']) {
+                        this.setActiveAction('idle');
+                    }
                 }
             }
         } else {
-            this.setActiveAction(this.actions['idle']);
+            this.setActiveAction('idle');
         }
     }
 
