@@ -166,8 +166,16 @@
         </p>
 
         <div class="bottom">
-            <a class="btn" href="/game.html">Jouer !</a>
+            <button class="btn" href="/game.html">Jouer !</button>
         </div>
+
+        <script>
+            const btn = document.querySelector('.btn');
+            btn.addEventListener('click', () => {
+                console.log('A');
+            });
+                
+        </script>
     </div>
 </body>
 
