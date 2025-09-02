@@ -16,7 +16,7 @@ export class Game {
         this.clock = new THREE.Clock();
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.cameraOffset = new THREE.Vector3(0, .75, .75);
+        this.cameraOffset = new THREE.Vector3(0, 2, 2);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -40,6 +40,7 @@ export class Game {
         this.setupLights();
         
         window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('wheel', (event) => this.onMouseWheel(event));
     }
 
     async init() {
@@ -104,6 +105,20 @@ export class Game {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    onMouseWheel(event) {
+        const zoomSpeed = 0.01;
+        const minZoomY = 2;
+        const maxZoomY = 15;
+        const minZoomZ = 2;
+        const maxZoomZ = 15;
+
+        this.cameraOffset.y -= event.deltaY * zoomSpeed;
+        this.cameraOffset.z -= event.deltaY * zoomSpeed;
+
+        this.cameraOffset.y = Math.max(minZoomY, Math.min(maxZoomY, this.cameraOffset.y));
+        this.cameraOffset.z = Math.max(minZoomZ, Math.min(maxZoomZ, this.cameraOffset.z));
     }
 
     playerAttack() {

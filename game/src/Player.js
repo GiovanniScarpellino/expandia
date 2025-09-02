@@ -7,7 +7,13 @@ export class Player {
         this.canMoveTo = canMoveTo;
         this.health = 100;
         this.attackDamage = 10;
-        this.moveSpeed = 0.02;
+        
+        this.walkSpeed = 0.02; // Base walking speed
+        this.sprintSpeed = 0.05; // Sprint speed
+        this.currentSpeed = 0; // Current actual speed
+        this.targetSpeed = 0; // Desired speed
+        this.acceleration = 0.0005; // How fast to accelerate
+        this.deceleration = 0.001; // How fast to decelerate
         
         this.mixer = null;
         this.actions = {};
@@ -26,6 +32,7 @@ export class Player {
             ArrowDown: false,
             ArrowLeft: false,
             ArrowRight: false,
+            ShiftLeft: false,
         };
 
         new GLTFLoader().load('/src/models/character-a.glb', (gltf) => {
@@ -82,7 +89,24 @@ export class Player {
             this.mixer.update(delta);
 
             const isMoving = this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
-            const targetAction = isMoving ? this.actions['run'] : this.actions['idle'];
+                
+            // Determine target speed
+            if (isMoving) {
+                this.targetSpeed = this.keys.ShiftLeft ? this.sprintSpeed : this.walkSpeed;
+            } else {
+                this.targetSpeed = 0;
+            }
+
+            // Smoothly interpolate current speed
+            if (this.currentSpeed < this.targetSpeed) {
+                this.currentSpeed += this.acceleration * delta * 60; // Multiply by 60 for frame-rate independence
+                if (this.currentSpeed > this.targetSpeed) this.currentSpeed = this.targetSpeed;
+            } else if (this.currentSpeed > this.targetSpeed) {
+                this.currentSpeed -= this.deceleration * delta * 60;
+                if (this.currentSpeed < this.targetSpeed) this.currentSpeed = this.targetSpeed;
+            }
+
+            const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['run'] : this.actions['idle'];
 
             if (this.activeAction && targetAction && this.activeAction !== targetAction) {
                 targetAction.reset();
@@ -104,7 +128,7 @@ export class Player {
             this.mesh.rotation.y = angle;
 
             const nextPosition = this.mesh.position.clone();
-            nextPosition.add(direction.multiplyScalar(this.moveSpeed));
+            nextPosition.add(direction.multiplyScalar(this.currentSpeed)); // Use currentSpeed
 
             if (this.canMoveTo(nextPosition)) {
                 this.mesh.position.copy(nextPosition);
