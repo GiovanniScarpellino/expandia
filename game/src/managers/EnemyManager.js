@@ -1,19 +1,11 @@
 import { Enemy } from '../Enemy.js';
 
 export class EnemyManager {
-    constructor(scene, modelLoader) {
+    constructor(scene, model) {
         this.scene = scene;
-        this.modelLoader = modelLoader;
         this.enemies = [];
-        this.model = null;
-        this.animations = null;
-    }
-
-    load() {
-        return this.modelLoader.load('/src/models/character-a.glb').then(gltf => {
-            this.model = gltf.scene;
-            this.animations = gltf.animations;
-        });
+        this.model = model.scene;
+        this.animations = model.animations;
     }
 
     createEnemy(position) {

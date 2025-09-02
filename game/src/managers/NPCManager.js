@@ -1,21 +1,13 @@
 import { NPC } from '../NPC.js';
 
 export class NPCManager {
-    constructor(scene, basePosition, modelLoader) {
+    constructor(scene, basePosition, model) {
         this.scene = scene;
-        this.modelLoader = modelLoader;
         this.npcs = [];
         this.npcCost = { wood: 10, stone: 10 };
         this.basePosition = basePosition;
-        this.model = null;
-        this.animations = null;
-    }
-
-    load() {
-        return this.modelLoader.load('/src/models/character-a.glb').then(gltf => {
-            this.model = gltf.scene;
-            this.animations = gltf.animations;
-        });
+        this.model = model.scene;
+        this.animations = model.animations;
     }
 
     createNPC() {

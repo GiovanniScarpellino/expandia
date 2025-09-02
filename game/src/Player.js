@@ -1,8 +1,7 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class Player {
-    constructor(scene, canMoveTo) {
+    constructor(scene, canMoveTo, model) {
         this.scene = scene;
         this.canMoveTo = canMoveTo;
         this.health = 100;
@@ -20,13 +19,37 @@ export class Player {
         this.actions = {};
         this.activeAction = null;
 
-        // Placeholder cube
-        const playerGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-        this.mesh = new THREE.Mesh(playerGeometry, playerMaterial);
-        this.mesh.position.set(0, 0, 0);
-        this.mesh.castShadow = true;
+        this.mesh = model.scene;
+        this.mesh.scale.set(0.1, 0.1, 0.1);
+        this.mesh.position.set(0, -0.5, 0);
+
+        this.mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
         this.scene.add(this.mesh);
+
+        this.mixer = new THREE.AnimationMixer(this.mesh);
+
+        const idleClip = THREE.AnimationClip.findByName(model.animations, 'idle');
+        const walkClip = THREE.AnimationClip.findByName(model.animations, 'walk');
+        const attackClip = THREE.AnimationClip.findByName(model.animations, 'attack-melee-right');
+        const pickupClip = THREE.AnimationClip.findByName(model.animations, 'pick-up');
+
+        if (idleClip) {
+            this.actions['idle'] = this.mixer.clipAction(idleClip);
+            this.activeAction = this.actions['idle'];
+            this.activeAction.play();
+        } else {
+            console.warn("Animation 'idle' not found.");
+        }
+
+        if (walkClip) this.actions['walk'] = this.mixer.clipAction(walkClip);
+        if (attackClip) this.actions['attack'] = this.mixer.clipAction(attackClip);
+        if (pickupClip) this.actions['pickup'] = this.mixer.clipAction(pickupClip);
 
         this.keys = {
             ArrowUp: false,
@@ -34,45 +57,6 @@ export class Player {
             ArrowLeft: false,
             ArrowRight: false,
         };
-
-        new GLTFLoader().load('/src/models/character-a.glb', (gltf) => {
-            this.scene.remove(this.mesh);
-            this.mesh = gltf.scene;
-            
-            this.mesh.scale.set(0.1, 0.1, 0.1);
-            this.mesh.position.set(0, -0.5, 0);
-
-            this.mesh.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-
-            this.scene.add(this.mesh);
-
-            this.mixer = new THREE.AnimationMixer(this.mesh);
-
-            const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'idle');
-            const walkClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
-            const attackClip = THREE.AnimationClip.findByName(gltf.animations, 'attack-melee-right');
-            const pickupClip = THREE.AnimationClip.findByName(gltf.animations, 'pick-up');
-
-            if (idleClip) {
-                this.actions['idle'] = this.mixer.clipAction(idleClip);
-                this.activeAction = this.actions['idle'];
-                this.activeAction.play();
-            } else {
-                console.warn("Animation 'idle' not found.");
-            }
-
-            if (walkClip) this.actions['walk'] = this.mixer.clipAction(walkClip);
-            if (attackClip) this.actions['attack'] = this.mixer.clipAction(attackClip);
-            if (pickupClip) this.actions['pickup'] = this.mixer.clipAction(pickupClip);
-
-        }, undefined, (error) => {
-            console.error("Error loading player model:", error);
-        });
     }
 
     playAction(actionName, loopOnce = true) {

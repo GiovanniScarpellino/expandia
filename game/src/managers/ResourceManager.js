@@ -1,32 +1,12 @@
 import { Resource } from '../Resource.js';
-import { ModelLoader } from '../utils/ModelLoader.js';
 
 export class ResourceManager {
-    constructor(scene, modelLoader) {
+    constructor(scene, models) {
         this.scene = scene;
-        this.modelLoader = modelLoader;
         this.resources = [];
         this.respawnQueue = [];
         this.respawnTime = 10000; // 10 seconds
-        this.models = {};
-
-        this.treeModelUrls = [
-            '/src/models/tree.glb',
-            '/src/models/tree-crooked.glb',
-        ];
-        this.rockModelUrls = [
-            '/src/models/rock-small.glb',
-            '/src/models/rock-large.glb',
-            '/src/models/rock-wide.glb'
-        ];
-    }
-
-    load() {
-        const allModelUrls = [...this.treeModelUrls, ...this.rockModelUrls];
-        return this.modelLoader.loadAll(allModelUrls).then(models => {
-            this.models.tree = this.treeModelUrls.map(url => models[url]);
-            this.models.rock = this.rockModelUrls.map(url => models[url]);
-        });
+        this.models = models;
     }
 
     createResource(type, position) {

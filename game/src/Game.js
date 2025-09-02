@@ -7,10 +7,10 @@ import { EnemyManager } from './managers/EnemyManager.js';
 import { NPCManager } from './managers/NPCManager.js';
 import { InputHandler } from './InputHandler.js';
 import { TouchHandler } from './TouchHandler.js';
-import { ModelLoader } from './utils/ModelLoader.js';
 
 export class Game {
-    constructor() {
+    constructor(models) {
+        this.models = models;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x262626);
 
@@ -30,12 +30,15 @@ export class Game {
         this.stone = 0;
 
         this.ui = new UI();
-        const modelLoader = new ModelLoader();
+
+        const resourceModels = {
+            tree: this.models.trees,
+            rock: this.models.rocks
+        };
+        this.resourceManager = new ResourceManager(this.scene, resourceModels);
+        this.enemyManager = new EnemyManager(this.scene, this.models.enemy);
         
-        this.resourceManager = new ResourceManager(this.scene, modelLoader);
-        this.enemyManager = new EnemyManager(this.scene, modelLoader);
-        
-        this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos));
+        this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos), this.models.player);
         this.inputHandler = new InputHandler(this);
         this.touchHandler = new TouchHandler(this);
         
@@ -45,19 +48,10 @@ export class Game {
         window.addEventListener('wheel', (event) => this.onMouseWheel(event));
     }
 
-    async init() {
-        const modelLoader = new ModelLoader();
-        const baseModelPromise = modelLoader.load('/src/models/blade.glb');
-        const loadPromises = [
-            this.resourceManager.load(),
-            this.enemyManager.load(),
-        ];
-
-        const [baseGltf] = await Promise.all([baseModelPromise, ...loadPromises]);
-        
+    init() {
         this.world = new World(this.scene, this.resourceManager, this.enemyManager);
         
-        this.base = baseGltf.scene;
+        this.base = this.models.base.scene;
         this.base.scale.set(0.5, 0.5, 0.5);
         this.base.position.set(0, this.world.yOffset, -2);
         this.base.rotation.y = Math.PI / 2;
@@ -69,8 +63,7 @@ export class Game {
         });
         this.scene.add(this.base);
 
-        this.npcManager = new NPCManager(this.scene, this.base.position, modelLoader);
-        await this.npcManager.load();
+        this.npcManager = new NPCManager(this.scene, this.base.position, this.models.npc);
 
         this.animate();
     }
