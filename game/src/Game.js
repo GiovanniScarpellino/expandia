@@ -122,7 +122,7 @@ export class Game {
     }
 
     playerAttack() {
-        this.player.playAttack();
+        this.player.playAction('attack');
 
         let closestEnemy = null;
         let minDistance = Infinity;
@@ -136,24 +136,36 @@ export class Game {
 
         if (closestEnemy && minDistance < 1.5) {
             if (closestEnemy.isBroken) {
-                // Enemy is broken, deal health damage
                 closestEnemy.takeDamage(this.player.ruptureAttackDamage);
             } else {
-                // Enemy is not broken, deal posture damage
                 closestEnemy.takePostureDamage(this.player.postureAttackDamage);
             }
         }
     }
 
     playerHarvest() {
+        let closestResource = null;
+        let minDistance = Infinity;
         this.resourceManager.resources.forEach(resource => {
-            if (resource.mesh.parent && this.player.mesh.position.distanceTo(resource.mesh.position) < 1) {
-                const resourceType = this.resourceManager.harvestResource(resource, this.player);
-                if (resourceType) {
-                    this.addResource(resourceType, 1);
-                }
+            const distance = this.player.mesh.position.distanceTo(resource.mesh.position);
+            if (resource.mesh.parent && distance < minDistance) {
+                minDistance = distance;
+                closestResource = resource;
             }
         });
+
+        if (closestResource && minDistance < 1) {
+            const action = this.player.playAction('pickup');
+            if (action) {
+                const animationDuration = action.getClip().duration * 1000; // in ms
+                setTimeout(() => {
+                    const resourceType = this.resourceManager.harvestResource(closestResource, this.player);
+                    if (resourceType) {
+                        this.addResource(resourceType, 1);
+                    }
+                }, animationDuration);
+            }
+        }
     }
 
     unlockTile() {
@@ -204,7 +216,7 @@ export class Game {
         this.player.update(delta);
         if (this.resourceManager) this.resourceManager.update();
         if (this.enemyManager) this.enemyManager.update(this.player, delta);
-        if (this.npcManager) this.npcManager.update(this.resourceManager.resources, this);
+        if (this.npcManager) this.npcManager.update(this.resourceManager.resources, this, delta);
         
         this.ui.updateHealth(this.player.health);
 

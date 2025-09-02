@@ -27,7 +27,7 @@ export class NPCManager {
         }
     }
 
-    update(resources, game) {
-        this.npcs.forEach(npc => npc.update(resources, game));
+    update(resources, game, delta) {
+        this.npcs.forEach(npc => npc.update(resources, game, delta));
     }
 }

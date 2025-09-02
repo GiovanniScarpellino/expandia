@@ -6,8 +6,8 @@ export class Player {
         this.scene = scene;
         this.canMoveTo = canMoveTo;
         this.health = 100;
-        this.postureAttackDamage = 35; // New: damage to posture
-        this.ruptureAttackDamage = 100; // New: damage to health when enemy is broken
+        this.postureAttackDamage = 35;
+        this.ruptureAttackDamage = 100;
         
         this.walkSpeed = 0.02;
         this.sprintSpeed = 0.05;
@@ -53,12 +53,10 @@ export class Player {
 
             this.mixer = new THREE.AnimationMixer(this.mesh);
 
-            // Log animations for debugging
-            console.log('Available animations:', gltf.animations.map(a => a.name));
-
             const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'idle');
             const runClip = THREE.AnimationClip.findByName(gltf.animations, 'walk');
             const attackClip = THREE.AnimationClip.findByName(gltf.animations, 'attack-melee-right');
+            const pickupClip = THREE.AnimationClip.findByName(gltf.animations, 'pick-up');
 
             if (idleClip) {
                 this.actions['idle'] = this.mixer.clipAction(idleClip);
@@ -68,28 +66,29 @@ export class Player {
                 console.warn("Animation 'idle' not found.");
             }
 
-            if (runClip) {
-                this.actions['run'] = this.mixer.clipAction(runClip);
-            }
-            if(attackClip){
-                this.actions['attack'] = this.mixer.clipAction(attackClip);
-            }
+            if (runClip) this.actions['run'] = this.mixer.clipAction(runClip);
+            if (attackClip) this.actions['attack'] = this.mixer.clipAction(attackClip);
+            if (pickupClip) this.actions['pickup'] = this.mixer.clipAction(pickupClip);
 
         }, undefined, (error) => {
             console.error("Error loading player model:", error);
         });
     }
 
-    playAttack() {
-        const attackAction = this.actions['attack'];
-        if (attackAction && this.activeAction !== attackAction) {
-            attackAction.reset();
-            attackAction.setLoop(THREE.LoopOnce, 1);
-            attackAction.clampWhenFinished = true;
-            this.activeAction.crossFadeTo(attackAction, 0.1, true);
-            attackAction.play();
-            this.activeAction = attackAction;
+    playAction(actionName, loopOnce = true) {
+        const action = this.actions[actionName];
+        if (action && this.activeAction !== action) {
+            action.reset();
+            if (loopOnce) {
+                action.setLoop(THREE.LoopOnce, 1);
+                action.clampWhenFinished = true;
+            }
+            this.activeAction.crossFadeTo(action, 0.1, true);
+            action.play();
+            this.activeAction = action;
+            return action; // Return the action to check its duration or status
         }
+        return null;
     }
 
     update(delta) {
@@ -98,19 +97,15 @@ export class Player {
         this.mixer.update(delta);
 
         const attackAction = this.actions['attack'];
+        const pickupAction = this.actions['pickup'];
 
-        // If attack is playing and has finished, transition back to idle
-        if (this.activeAction === attackAction && !attackAction.isRunning()) {
-            const idleAction = this.actions['idle'];
-            idleAction.reset();
-            idleAction.play();
-            this.activeAction.crossFadeTo(idleAction, 0.2, true);
-            this.activeAction = idleAction;
+        // If a one-shot animation is playing and has finished, transition back to idle
+        if ((this.activeAction === attackAction || this.activeAction === pickupAction) && !this.activeAction.isRunning()) {
+            this.playAction('idle', false);
         }
 
-        // Do not handle movement if an attack is playing
-        if (this.activeAction === attackAction) {
-             // While attacking, we might want to halt movement
+        // Do not handle movement if a blocking animation is playing
+        if (this.activeAction === attackAction || this.activeAction === pickupAction) {
             this.currentSpeed = 0;
             return; // Skip movement logic
         }
@@ -135,10 +130,7 @@ export class Player {
         const targetAction = (isMoving && this.currentSpeed > 0) ? this.actions['run'] : this.actions['idle'];
 
         if (this.activeAction !== targetAction) {
-            targetAction.reset();
-            targetAction.play();
-            this.activeAction.crossFadeTo(targetAction, 0.05, true);
-            this.activeAction = targetAction;
+            this.playAction(targetAction.getClip().name, false);
         }
 
         const direction = new THREE.Vector3();

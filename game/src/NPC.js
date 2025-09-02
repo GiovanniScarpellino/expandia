@@ -15,14 +15,50 @@ export class NPC {
             }
         });
 
-        this.mesh.userData = { state: 'IDLE', target: null };
         this.scene.add(this.mesh);
-        this.speed = 0.05;
+        this.speed = 0.01; // Adjusted for animation
+
+        // --- ANIMATION ---
+        this.mixer = new THREE.AnimationMixer(this.mesh);
+        this.actions = {};
+        this.activeAction = null;
+
+        const idleClip = THREE.AnimationClip.findByName(animations, 'idle');
+        const walkClip = THREE.AnimationClip.findByName(animations, 'walk');
+        const pickupClip = THREE.AnimationClip.findByName(animations, 'pick-up');
+
+        if (idleClip) this.actions['idle'] = this.mixer.clipAction(idleClip);
+        if (walkClip) this.actions['walk'] = this.mixer.clipAction(walkClip);
+        if (pickupClip) this.actions['pickup'] = this.mixer.clipAction(pickupClip);
+
+        // --- STATE ---
+        this.state = 'IDLE';
+        this.target = null;
+        this.harvestingStartTime = 0;
+
+        this.setActiveAction(this.actions['idle']);
     }
 
-    update(resources, game) {
+    setActiveAction(action) {
+        if (this.activeAction === action || !action) return;
+
+        if (this.activeAction) {
+            this.activeAction.fadeOut(0.2);
+        }
+        
+        this.activeAction = action;
+        this.activeAction.reset().fadeIn(0.2).play();
+    }
+
+    update(resources, game, delta) {
+        if (this.mixer) {
+            this.mixer.update(delta);
+        }
+
         const now = Date.now();
-        if (this.mesh.userData.state === 'IDLE') {
+
+        if (this.state === 'IDLE') {
+            this.setActiveAction(this.actions['idle']);
             let closestResource = null;
             let minDistance = Infinity;
             resources.forEach(resource => {
@@ -36,36 +72,40 @@ export class NPC {
             });
 
             if (closestResource) {
-                this.mesh.userData.target = closestResource;
+                this.target = closestResource;
                 closestResource.mesh.userData.targeted = true;
-                this.mesh.userData.state = 'MOVING_TO_RESOURCE';
+                this.state = 'MOVING_TO_RESOURCE';
             }
-        } else if (this.mesh.userData.state === 'MOVING_TO_RESOURCE') {
-            const target = this.mesh.userData.target;
-            if (target && target.mesh.parent) {
-                const direction = new THREE.Vector3().subVectors(target.mesh.position, this.mesh.position).normalize();
+        } else if (this.state === 'MOVING_TO_RESOURCE') {
+            this.setActiveAction(this.actions['walk']);
+            if (this.target && this.target.mesh.parent) {
+                const direction = new THREE.Vector3().subVectors(this.target.mesh.position, this.mesh.position);
+                const angle = Math.atan2(direction.x, direction.z);
+                this.mesh.rotation.y = angle;
+                direction.normalize();
                 this.mesh.position.add(direction.multiplyScalar(this.speed));
 
-                if (this.mesh.position.distanceTo(target.mesh.position) < 0.5) {
-                    this.mesh.userData.state = 'HARVESTING';
-                    this.mesh.userData.harvestingStartTime = now;
+                if (this.mesh.position.distanceTo(this.target.mesh.position) < 0.5) {
+                    this.state = 'HARVESTING';
+                    this.harvestingStartTime = now;
                 }
             } else {
-                this.mesh.userData.state = 'IDLE';
+                this.state = 'IDLE';
             }
-        } else if (this.mesh.userData.state === 'HARVESTING') {
-            if (now - this.mesh.userData.harvestingStartTime > 2000) { // 2 seconds to harvest
-                const target = this.mesh.userData.target;
-                if (target && target.mesh.parent) {
-                    const resourceType = game.resourceManager.harvestResource(target, this);
+        } else if (this.state === 'HARVESTING') {
+            this.setActiveAction(this.actions['pickup']);
+            if (now - this.harvestingStartTime > 2000) { // 2 seconds to harvest
+                if (this.target && this.target.mesh.parent) {
+                    const resourceType = game.resourceManager.harvestResource(this.target, this);
                     if(resourceType){
                         game.addResource(resourceType, 1);
                     }
                 }
-                this.mesh.userData.state = 'IDLE';
+                this.state = 'IDLE';
             }
         }
     }
+
      destroy() {
         this.scene.remove(this.mesh);
     }
