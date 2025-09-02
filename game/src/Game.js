@@ -6,6 +6,7 @@ import { ResourceManager } from './managers/ResourceManager.js';
 import { EnemyManager } from './managers/EnemyManager.js';
 import { NPCManager } from './managers/NPCManager.js';
 import { InputHandler } from './InputHandler.js';
+import { TouchHandler } from './TouchHandler.js';
 import { ModelLoader } from './utils/ModelLoader.js';
 
 export class Game {
@@ -36,6 +37,7 @@ export class Game {
         
         this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos));
         this.inputHandler = new InputHandler(this);
+        this.touchHandler = new TouchHandler(this);
         
         this.setupLights();
         
@@ -144,17 +146,8 @@ export class Game {
     }
 
     playerHarvest() {
-        let closestResource = null;
-        let minDistance = Infinity;
-        this.resourceManager.resources.forEach(resource => {
-            const distance = this.player.mesh.position.distanceTo(resource.mesh.position);
-            if (resource.mesh.parent && distance < minDistance) {
-                minDistance = distance;
-                closestResource = resource;
-            }
-        });
-
-        if (closestResource && minDistance < 1) {
+        let closestResource = this.getClosestResource(1);
+        if (closestResource) {
             const action = this.player.playAction('pickup');
             if (action) {
                 const animationDuration = action.getClip().duration * 1000; // in ms
@@ -171,20 +164,8 @@ export class Game {
     unlockTile() {
         const unlockCost = 1;
         if (this.wood >= unlockCost) {
-            let tileToUnlock = null;
-            let minDistance = Infinity;
-
-            Object.values(this.world.tiles).forEach(tile => {
-                if (!tile.userData.unlocked) {
-                    const distance = this.player.mesh.position.distanceTo(tile.position);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        tileToUnlock = tile;
-                    }
-                }
-            });
-
-            if (tileToUnlock && minDistance < 1.5) {
+            let tileToUnlock = this.getClosestUnlockableTile(1.5);
+            if (tileToUnlock) {
                 this.wood -= unlockCost;
                 this.ui.updateWood(this.wood);
                 this.world.unlockTile(tileToUnlock);
@@ -201,6 +182,45 @@ export class Game {
                 this.ui.updateStone(this.stone);
                 this.npcManager.createNPC();
             }
+        }
+    }
+
+    getClosestResource(maxDist) {
+        let closestResource = null;
+        let minDistance = Infinity;
+        this.resourceManager.resources.forEach(resource => {
+            const distance = this.player.mesh.position.distanceTo(resource.mesh.position);
+            if (resource.mesh.parent && distance < minDistance) {
+                minDistance = distance;
+                closestResource = resource;
+            }
+        });
+        return minDistance < maxDist ? closestResource : null;
+    }
+
+    getClosestUnlockableTile(maxDist) {
+        let tileToUnlock = null;
+        let minDistance = Infinity;
+        Object.values(this.world.tiles).forEach(tile => {
+            if (!tile.userData.unlocked) {
+                const distance = this.player.mesh.position.distanceTo(tile.position);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    tileToUnlock = tile;
+                }
+            }
+        });
+        return minDistance < maxDist ? tileToUnlock : null;
+    }
+
+    doContextualAction() {
+        // Priority: Harvest > Buy NPC > Unlock Tile
+        if (this.getClosestResource(1)) {
+            this.playerHarvest();
+        } else if (this.player.mesh.position.distanceTo(this.base.position) < 2 && this.wood >= this.npcManager.npcCost.wood && this.stone >= this.npcManager.npcCost.stone) {
+            this.buyNPC();
+        } else if (this.getClosestUnlockableTile(1.5)) {
+            this.unlockTile();
         }
     }
 

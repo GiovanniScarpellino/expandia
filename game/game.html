@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <link rel="stylesheet" href="/src/style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Game</title>
   </head>
   <body>
@@ -16,6 +16,18 @@
         <div id="health">Health: 100</div>
       </div>
     </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <div id="joystick-area">
+        <div id="joystick"></div>
+      </div>
+      <div id="action-buttons">
+        <button id="context-button">✋</button>
+        <button id="attack-button">⚔️</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

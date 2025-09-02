@@ -15,16 +15,8 @@ export class InputHandler {
             this.game.playerAttack();
         }
 
-        if (event.key === ' ') { // Harvest
-            this.game.playerHarvest();
-        }
-
-        if (event.key === 'e') { // Unlock
-            this.game.unlockTile();
-        }
-
-        if (event.key === 'b') { // Buy NPC
-            this.game.buyNPC();
+        if (event.key === 'e') { // Contextual Action
+            this.game.doContextualAction();
         }
     }
 
