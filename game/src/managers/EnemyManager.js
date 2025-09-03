@@ -1,11 +1,12 @@
 import { Enemy } from '../Enemy.js';
 
 export class EnemyManager {
-    constructor(scene, model) {
+    constructor(scene, model, questManager) {
         this.scene = scene;
         this.enemies = [];
         this.model = model.scene;
         this.animations = model.animations;
+        this.questManager = questManager;
     }
 
     createEnemy(position) {
@@ -21,6 +22,7 @@ export class EnemyManager {
             enemy.update(player, delta);
 
             if (enemy.isReadyToBeRemoved) {
+                this.questManager.checkProgress('defeat_enemy', 1);
                 enemy.destroy();
                 this.enemies.splice(i, 1);
             }

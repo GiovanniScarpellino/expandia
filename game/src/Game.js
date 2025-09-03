@@ -6,6 +6,7 @@ import { ResourceManager } from './managers/ResourceManager.js';
 import { EnemyManager } from './managers/EnemyManager.js';
 import { NPCManager } from './managers/NPCManager.js';
 import { InputHandler } from './InputHandler.js';
+import { QuestManager } from './managers/QuestManager.js';
 import { TouchHandler } from './TouchHandler.js';
 
 export class Game {
@@ -30,13 +31,14 @@ export class Game {
         this.stone = 0;
 
         this.ui = new UI();
+        this.questManager = new QuestManager(this.ui, this);
 
         const resourceModels = {
             tree: this.models.trees,
             rock: this.models.rocks
         };
         this.resourceManager = new ResourceManager(this.scene, resourceModels);
-        this.enemyManager = new EnemyManager(this.scene, this.models.enemy);
+        this.enemyManager = new EnemyManager(this.scene, this.models.enemy, this.questManager);
         
         this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos), this.models.player);
         this.inputHandler = new InputHandler(this);
@@ -64,6 +66,9 @@ export class Game {
         this.scene.add(this.base);
 
         this.npcManager = new NPCManager(this.scene, this.base.position, this.models.npc);
+
+        // Fetch the first quest
+        this.questManager.getNewQuest({ wood: this.wood, stone: this.stone, unlockedTiles: 1 });
 
         this.animate();
     }
@@ -94,6 +99,7 @@ export class Game {
             this.stone += amount;
             this.ui.updateStone(this.stone);
         }
+        this.questManager.checkProgress('collect_resource', { type, amount });
     }
 
     onWindowResize() {
@@ -162,6 +168,7 @@ export class Game {
                 this.wood -= unlockCost;
                 this.ui.updateWood(this.wood);
                 this.world.unlockTile(tileToUnlock);
+                this.questManager.checkProgress('unlock_tile', 1);
             }
         }
     }
@@ -229,7 +236,10 @@ export class Game {
         this.player.update(delta);
         if (this.resourceManager) this.resourceManager.update();
         if (this.enemyManager) this.enemyManager.update(this.player, delta);
-        if (this.npcManager) this.npcManager.update(this.resourceManager.resources, this, delta);
+        if (this.npcManager) {
+            this.npcManager.update(this.resourceManager.resources, this, delta);
+            this.ui.updateNpcCount(this.npcManager.npcs.length);
+        }
         
         this.ui.updateHealth(this.player.health);
 
