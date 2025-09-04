@@ -51,6 +51,14 @@ export class Game {
         this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos), this.models.player);
         this.inputHandler = new InputHandler(this);
         this.touchHandler = new TouchHandler(this);
+
+        this.isAutoMode = false;
+        const autoModeButton = document.getElementById('auto-mode-button');
+        autoModeButton.addEventListener('click', () => {
+            this.isAutoMode = !this.isAutoMode;
+            autoModeButton.style.backgroundColor = this.isAutoMode ? '#4CAF50' : '';
+            autoModeButton.style.color = this.isAutoMode ? 'white' : '';
+        });
         
         window.addEventListener('resize', () => this.onWindowResize());
         window.addEventListener('wheel', (event) => this.onMouseWheel(event));
@@ -354,7 +362,7 @@ export class Game {
         const delta = this.clock.getDelta();
 
         this.cycleManager.update(delta);
-        this.player.update(delta);
+        this.player.update(this, delta);
         if (this.resourceManager) this.resourceManager.update();
         if (this.enemyManager) this.enemyManager.update(this.player, delta);
         if (this.npcManager) {

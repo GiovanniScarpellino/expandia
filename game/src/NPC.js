@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Pathfinding } from './utils/Pathfinding.js';
 
 export class NPC {
     constructor(scene, position, model, animations) {
@@ -16,7 +17,7 @@ export class NPC {
         });
 
         this.scene.add(this.mesh);
-        this.speed = 0.01; // Adjusted for animation
+        this.speed = 0.02; // Adjusted for animation
 
         // --- ANIMATION ---
         this.mixer = new THREE.AnimationMixer(this.mesh);
@@ -34,6 +35,7 @@ export class NPC {
         // --- STATE ---
         this.state = 'IDLE';
         this.target = null;
+        this.path = null;
         this.harvestingStartTime = 0;
 
         this.setActiveAction(this.actions['idle']);
@@ -62,7 +64,7 @@ export class NPC {
             let closestResource = null;
             let minDistance = Infinity;
             resources.forEach(resource => {
-                if (resource.mesh.parent && !resource.mesh.userData.targeted) {
+                if (resource.mesh.parent && !resource.mesh.userData.targeted && game.world.canMoveTo(resource.mesh.position)) {
                     const distance = this.mesh.position.distanceTo(resource.mesh.position);
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -72,25 +74,52 @@ export class NPC {
             });
 
             if (closestResource) {
-                this.target = closestResource;
-                closestResource.mesh.userData.targeted = true;
-                this.state = 'MOVING_TO_RESOURCE';
+                const startCoords = game.world.getTileCoordinates(this.mesh.position);
+                const endCoords = game.world.getTileCoordinates(closestResource.mesh.position);
+
+                if (startCoords.x === endCoords.x && startCoords.z === endCoords.z) {
+                    this.target = closestResource;
+                    closestResource.mesh.userData.targeted = true;
+                    this.state = 'HARVESTING';
+                    this.harvestingStartTime = now;
+                } else {
+                    const path = Pathfinding.findPath(this.mesh.position, closestResource.mesh.position, game.world);
+                    if (path && path.length > 1) {
+                        this.target = closestResource;
+                        closestResource.mesh.userData.targeted = true;
+                        this.path = path;
+                        this.path.shift(); 
+                        this.state = 'MOVING_TO_RESOURCE';
+                    }
+                }
             }
         } else if (this.state === 'MOVING_TO_RESOURCE') {
             this.setActiveAction(this.actions['walk']);
-            if (this.target && this.target.mesh.parent) {
-                const direction = new THREE.Vector3().subVectors(this.target.mesh.position, this.mesh.position);
-                const angle = Math.atan2(direction.x, direction.z);
-                this.mesh.rotation.y = angle;
-                direction.normalize();
-                this.mesh.position.add(direction.multiplyScalar(this.speed));
+            if (this.target && this.target.mesh.parent && this.path && this.path.length > 0) {
+                const targetPos = new THREE.Vector3(this.path[0].x * game.world.tileSize, this.mesh.position.y, this.path[0].z * game.world.tileSize);
+                
+                const direction = new THREE.Vector3().subVectors(targetPos, this.mesh.position);
+                if (direction.length() > 0.01) {
+                    const angle = Math.atan2(direction.x, direction.z);
+                    this.mesh.rotation.y = angle;
+                    direction.normalize();
+                    this.mesh.position.add(direction.multiplyScalar(this.speed));
+                }
 
-                if (this.mesh.position.distanceTo(this.target.mesh.position) < 0.5) {
-                    this.state = 'HARVESTING';
-                    this.harvestingStartTime = now;
+                if (this.mesh.position.distanceTo(targetPos) < 0.1) {
+                    this.path.shift();
+                    if (this.path.length === 0) {
+                        this.state = 'HARVESTING';
+                        this.harvestingStartTime = now;
+                    }
                 }
             } else {
                 this.state = 'IDLE';
+                if (this.target) {
+                    this.target.mesh.userData.targeted = false;
+                    this.target = null;
+                }
+                this.path = null;
             }
         } else if (this.state === 'HARVESTING') {
             this.setActiveAction(this.actions['pickup']);
@@ -101,6 +130,10 @@ export class NPC {
                         game.addResource(resourceType, 1);
                     }
                 }
+                if (this.target) {
+                    this.target.mesh.userData.targeted = false;
+                }
+                this.target = null;
                 this.state = 'IDLE';
             }
         }
