@@ -10,7 +10,7 @@ export class NPCManager {
         this.animations = model.animations;
     }
 
-    createNPC() {
+    createNPC(fromSave = false) {
         if (this.model) {
             const npcPosition = this.basePosition.clone();
             npcPosition.y = -0.35; // Adjust y to be on the ground

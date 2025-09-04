@@ -1,4 +1,5 @@
 import { Resource } from '../Resource.js';
+import * as THREE from 'three';
 
 export class ResourceManager {
     constructor(scene, models) {
@@ -44,5 +45,32 @@ export class ResourceManager {
             return resource.type;
         }
         return null;
+    }
+
+    clearAll() {
+        this.resources.forEach(resource => {
+            if (resource.mesh.parent) {
+                this.scene.remove(resource.mesh);
+            }
+        });
+        this.resources = [];
+        this.respawnQueue = [];
+    }
+
+    loadState(data) {
+        this.clearAll();
+        if (!data) return;
+
+        data.active.forEach(resData => {
+            this.createResource(resData.type, new THREE.Vector3(resData.position.x, resData.position.y, resData.position.z));
+        });
+
+        data.respawning.forEach(resData => {
+            const resource = this.createResource(resData.type, new THREE.Vector3(resData.position.x, resData.position.y, resData.position.z));
+            if (resource) {
+                this.scene.remove(resource.mesh);
+                this.respawnQueue.push({ object: resource, respawnTime: resData.respawnAt });
+            }
+        });
     }
 }

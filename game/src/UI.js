@@ -10,6 +10,18 @@ export class UI {
         this.updateHealth(100);
         this.updateQuest("En attente d'un objectif...");
         this.updateNpcCount(0);
+
+        this.saveIndicatorDiv = document.createElement('div');
+        this.saveIndicatorDiv.id = 'save-indicator';
+        this.saveIndicatorDiv.innerText = 'Partie sauvegardée !';
+        document.body.appendChild(this.saveIndicatorDiv);
+    }
+
+    showSaveIndicator() {
+        this.saveIndicatorDiv.classList.add('show');
+        setTimeout(() => {
+            this.saveIndicatorDiv.classList.remove('show');
+        }, 2000);
     }
 
     updateWood(amount) {

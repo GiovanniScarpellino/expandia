@@ -46,6 +46,25 @@ async function main() {
     // Start game
     const game = new Game(loadedModels);
     game.start();
+
+    // --- Save/Delete Buttons Logic ---
+    const saveButton = document.getElementById('save-button');
+    if (saveButton) {
+        saveButton.addEventListener('click', () => {
+            game.saveState();
+        });
+    }
+
+    const deleteSaveButton = document.getElementById('delete-save-button');
+    if (deleteSaveButton) {
+        deleteSaveButton.addEventListener('click', () => {
+            if (confirm('Voulez-vous vraiment supprimer la sauvegarde ? Cette action est irréversible.')) {
+                game.gameStateManager.deleteSave();
+                alert('Sauvegarde supprimée. La page va se rafraîchir pour commencer une nouvelle partie.');
+                location.reload();
+            }
+        });
+    }
 }
 
 main().catch(error => {

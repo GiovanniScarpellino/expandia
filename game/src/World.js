@@ -3,23 +3,26 @@ import * as THREE from 'three';
 export class World {
     yOffset = -0.5;
 
-    constructor(scene, resourceManager, enemyManager) {
+    constructor(scene) {
         this.scene = scene;
-        this.resourceManager = resourceManager;
-        this.enemyManager = enemyManager;
         this.tileSize = 2;
         this.tiles = {};
         this.unlockedMaterial = new THREE.MeshStandardMaterial({ color: 0x556B2F });
         this.lockedMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, transparent: true, opacity: 0.5 });
+    }
 
+    init() {
         this.createTile(0, 0, true);
         this.createTile(0, 1, false);
         this.createTile(0, -1, false);
         this.createTile(1, 0, false);
         this.createTile(-1, 0, false);
+    }
 
-        this.resourceManager.createResource('tree', new THREE.Vector3(0.5, this.yOffset, 0.5));
-        this.resourceManager.createResource('rock', new THREE.Vector3(-0.5, this.yOffset, 0.5));
+    loadState(tilesData) {
+        tilesData.forEach(tileData => {
+            this.createTile(tileData.x, tileData.z, tileData.unlocked);
+        });
     }
 
     getTileKey(x, z) {
@@ -41,7 +44,7 @@ export class World {
     createTile(x, z, unlocked = false) {
         const key = this.getTileKey(x, z);
         if (this.tiles[key]) {
-            return this.tiles[key];
+            return { tile: this.tiles[key], isNew: false };
         }
 
         const tileGeometry = new THREE.PlaneGeometry(this.tileSize, this.tileSize);
@@ -52,19 +55,7 @@ export class World {
         tile.userData = { unlocked, x, z };
         this.scene.add(tile);
         this.tiles[key] = tile;
-
-        if (!unlocked) {
-            if (Math.random() < 0.2) {
-                this.resourceManager.createResource('tree', new THREE.Vector3(tile.position.x, this.yOffset, tile.position.z));
-            }
-            if (Math.random() < 0.1) {
-                this.resourceManager.createResource('rock', new THREE.Vector3(tile.position.x, this.yOffset, tile.position.z));
-            }
-            if (Math.random() < 0.05) {
-                this.enemyManager.createEnemy(new THREE.Vector3(tile.position.x, -0.2, tile.position.z));
-            }
-        }
-        return tile;
+        return { tile: tile, isNew: true };
     }
 
     unlockTile(tile) {
@@ -72,9 +63,18 @@ export class World {
         tile.userData.unlocked = true;
 
         const { x, z } = tile.userData;
-        this.createTile(x + 1, z, false);
-        this.createTile(x - 1, z, false);
-        this.createTile(x, z + 1, false);
-        this.createTile(x, z - 1, false);
+        const newTilesInfo = [];
+        const results = [
+            this.createTile(x + 1, z, false),
+            this.createTile(x - 1, z, false),
+            this.createTile(x, z + 1, false),
+            this.createTile(x, z - 1, false)
+        ];
+
+        results.forEach(result => {
+            newTilesInfo.push({ coords: result.tile.userData, isNew: result.isNew });
+        });
+
+        return newTilesInfo;
     }
 }
