@@ -1,39 +1,59 @@
-Gemini.md
-
-🎮 Projet : Jeu type My Little Universe avec Three.js + IA (Gemini)
+🎮 Projet : Jeu de Survie & Tower Defense avec Three.js + IA (Gemini)
 
 ⸻
 
 🚀 Vision
 
-Un jeu 3D en vue du dessus où le joueur explore, récolte des ressources et agrandit progressivement son univers. L’IA (Gemini) interviendra plus tard pour générer des biomes, des quêtes et équilibrer le gameplay.
+Un jeu de survie en 3D où le joueur doit explorer et récolter des ressources le jour pour construire des défenses et survivre à des hordes d'ennemis qui attaquent sa base la nuit. L'objectif est de survivre le plus de jours possible face à une difficulté croissante.
 
 ⸻
 
-🗺️ Roadmap — MVP (2 à 4 semaines)
+🔄 Boucle de Gameplay
 
-🎯 Objectif : Un prototype jouable minimaliste.
-	•	Setup projet : Node.js + Vite/Parcel + Three.js.
-	•	Caméra & contrôle : Vue du dessus, mouvement du personnage.
-	•	Terrain simple : Une petite île low-poly.
-	•	Collecte basique : Arbres (bois) + rochers (pierre).
-	•	Déblocage cases : Dépenser ressources pour agrandir la carte.
-	•	HUD simple : Inventaire avec compte de bois/pierre.
+Le jeu est divisé en deux phases distinctes :
+
+☀️ **Phase de Jour**
+*   **Exploration & Collecte :** Le joueur explore la carte pour trouver et récolter des ressources (bois, pierre, etc.).
+*   **Artisanat & Construction :** Utilisation des ressources pour fabriquer des outils, des armes, et surtout des fortifications (murs, pièges).
+*   **Gestion :** Recrutement et assignation de PNJ pour automatiser certaines tâches (collecte, défense).
+
+🌙 **Phase de Nuit**
+*   **Assaut :** Des vagues d'ennemis apparaissent aux limites du monde exploré.
+*   **Défense :** Les ennemis attaquent le joueur, les PNJ, et ciblent en priorité la base principale.
+*   **Survie :** Le joueur doit utiliser ses constructions et ses compétences pour survivre jusqu'à l'aube.
+
+⸻
+
+🗺️ Roadmap — Prochaine Étape : Le Cycle de Survie
+
+🎯 **Objectif :** Implémenter la boucle de gameplay Jour/Nuit de base.
+
+1.  **Mise en place du Cycle Jour/Nuit :**
+    *   Créer un `CycleManager` pour gérer le temps (durée du jour/nuit) et l'éclairage de la scène.
+    *   Ajouter un compteur de "Jours Survécus" à l'interface utilisateur.
+
+2.  **Mécaniques de la Nuit :**
+    *   Faire apparaître des vagues d'ennemis à la tombée de la nuit.
+    *   Modifier l'IA ennemie pour qu'elle cible la base.
+    *   Donner des points de vie à la base et créer une condition de "Game Over".
+
+3.  **Mécaniques de Défense (Initiales) :**
+    *   Intégrer un système d'artisanat de base.
+    *   Permettre au joueur de fabriquer et de placer un premier type de fortification (ex: Mur en bois).
 
 ⸻
 
 ⚙️ Stack technique
-	•	Rendu 3D : Three.js
-	•	Langage : JavaScript/TypeScript
-	•	Build : Vite ou Parcel
-	•	Sauvegarde : LocalStorage/IndexedDB
+*   Rendu 3D : Three.js
+*   Langage : JavaScript/TypeScript
+*   Build : Vite
+*   Sauvegarde : LocalStorage
 
 ⸻
 
-✅ Prochaines étapes
-	1.	Initialiser projet Three.js (Hello cube + caméra vue du dessus).
-	2.	Intégrer un personnage basique (cube ou modèle simple).
-	3.	Ajouter un premier arbre destructible + compteur de ressources.
-	4.	Débloquer une nouvelle case de terrain après récolte.
-
-⸻
+💡 Fonctionnalités Futures
+*   PNJ spécialisés (Bûcherons, Mineurs, Gardes).
+*   Pièges et fortifications avancées (en pierre, etc.).
+*   Nouveaux types d'ennemis et des Boss.
+*   Système de progression du joueur (XP, niveaux, compétences).
+*   Biomes variés avec des ressources uniques.

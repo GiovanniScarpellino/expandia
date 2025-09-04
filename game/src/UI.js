@@ -5,6 +5,10 @@ export class UI {
         this.healthDiv = document.getElementById('health');
         this.questDiv = document.getElementById('quest');
         this.npcCountDiv = document.getElementById('npc-count');
+        this.dayCounterDiv = document.getElementById('day-counter');
+        this.cycleStatusDiv = document.getElementById('cycle-status');
+        this.cycleTimerDiv = document.getElementById('cycle-timer');
+
         this.updateWood(0);
         this.updateStone(0);
         this.updateHealth(100);
@@ -51,5 +55,14 @@ export class UI {
 
     updateNpcCount(count) {
         this.npcCountDiv.innerText = `PNJs: ${count}`;
+    }
+
+    updateCycle(isDay, timeOfDay, daysSurvived) {
+        this.dayCounterDiv.innerText = `Jour: ${daysSurvived}`;
+        this.cycleStatusDiv.innerText = `Phase: ${isDay ? 'Jour' : 'Nuit'}`;
+
+        const minutes = Math.floor(timeOfDay / 60000);
+        const seconds = ((timeOfDay % 60000) / 1000).toFixed(0);
+        this.cycleTimerDiv.innerText = `Temps restant: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 }

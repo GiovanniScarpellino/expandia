@@ -9,6 +9,8 @@ import { InputHandler } from './InputHandler.js';
 import { QuestManager } from './managers/QuestManager.js';
 import { TouchHandler } from './TouchHandler.js';
 import { GameStateManager } from './managers/GameStateManager.js';
+import { CycleManager } from './managers/CycleManager.js';
+import { Lamppost } from './Lamppost.js';
 
 export class Game {
     constructor(models) {
@@ -33,7 +35,8 @@ export class Game {
 
         this.ui = new UI();
         this.gameStateManager = new GameStateManager();
-        this.autoSaveInterval = null;
+        this.cycleManager = new CycleManager(this.scene, this.ui);
+        this.lampposts = [];
 
         this.questManager = new QuestManager(this.ui, this);
 
@@ -48,8 +51,6 @@ export class Game {
         this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos), this.models.player);
         this.inputHandler = new InputHandler(this);
         this.touchHandler = new TouchHandler(this);
-        
-        this.setupLights();
         
         window.addEventListener('resize', () => this.onWindowResize());
         window.addEventListener('wheel', (event) => this.onMouseWheel(event));
@@ -78,16 +79,20 @@ export class Game {
         this.scene.add(this.base);
 
         this.npcManager = new NPCManager(this.scene, this.base.position, this.models.npc);
+        this.cycleManager.setLampposts(this.lampposts);
 
         this.questManager.getNewQuest({ wood: this.wood, stone: this.stone, unlockedTiles: Object.keys(this.world.tiles).length });
 
-        
+        this.cycleManager.onNightStart = (wave) => this.startNight(wave);
+        this.cycleManager.onDayStart = () => this.endNight();
     }
 
     initNewGame() {
         this.world.init();
         this.resourceManager.createResource('tree', new THREE.Vector3(0.5, this.world.yOffset, 0.5));
         this.resourceManager.createResource('rock', new THREE.Vector3(-0.5, this.world.yOffset, 0.5));
+        const startLamp = new Lamppost(this.scene, new THREE.Vector3(0, -0.5, 0));
+        this.lampposts.push(startLamp);
         this.initSharedComponents();
     }
 
@@ -115,7 +120,13 @@ export class Game {
                     position: item.object.position,
                     respawnAt: item.respawnTime
                 }))
-            }
+            },
+            cycle: {
+                isDay: this.cycleManager.isDay,
+                timeOfDay: this.cycleManager.timeOfDay,
+                daysSurvived: this.cycleManager.daysSurvived
+            },
+            lampposts: this.lampposts.map(l => l.position)
         };
         this.gameStateManager.save(state);
         this.ui.showSaveIndicator();
@@ -135,6 +146,24 @@ export class Game {
         this.world.loadState(savedState.world.tiles);
         this.resourceManager.loadState(savedState.resources);
 
+        if (savedState.lampposts) {
+            savedState.lampposts.forEach(pos => {
+                const lamp = new Lamppost(this.scene, new THREE.Vector3(pos.x, pos.y, pos.z));
+                this.lampposts.push(lamp);
+            });
+        }
+
+        if (savedState.cycle) {
+            this.cycleManager.isDay = savedState.cycle.isDay;
+            this.cycleManager.timeOfDay = savedState.cycle.timeOfDay;
+            this.cycleManager.daysSurvived = savedState.cycle.daysSurvived;
+            if (this.cycleManager.isDay) {
+                this.lampposts.forEach(l => l.turnOff());
+            } else {
+                this.lampposts.forEach(l => l.turnOn());
+            }
+        }
+
         this.initSharedComponents();
 
         const npcCount = savedState.npcs.count;
@@ -147,22 +176,12 @@ export class Game {
         this.ui.updateHealth(this.player.health);
     }
 
-    setupLights() {
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
-        directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 50;
-        directionalLight.shadow.camera.left = -20;
-        directionalLight.shadow.camera.right = 20;
-        directionalLight.shadow.camera.top = 20;
-        directionalLight.shadow.camera.bottom = -20;
-        this.scene.add(directionalLight);
+    startNight(wave) {
+        console.log(`La nuit ${wave} commence ! Les monstres arrivent !`);
+    }
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-        this.scene.add(ambient);
+    endNight() {
+        console.log("Le jour se lève. Vous avez survécu !");
     }
     
     addResource(type, amount) {
@@ -242,26 +261,33 @@ export class Game {
                 this.wood -= unlockCost;
                 this.ui.updateWood(this.wood);
                 const newTilesInfo = this.world.unlockTile(tileToUnlock);
+
+                const { x, z } = tileToUnlock.userData;
+                if (x !== 0 || z !== 0) {
+                    if (Math.abs(x) % 3 === 0 && Math.abs(z) % 3 === 0) {
+                        const lamp = new Lamppost(this.scene, tileToUnlock.position.clone());
+                        this.lampposts.push(lamp);
+                        if (!this.cycleManager.isDay) {
+                            lamp.turnOn();
+                        }
+                    }
+                }
                 
                 newTilesInfo.forEach(info => {
-                    // Only spawn on tiles that were newly created
                     if (info.isNew) {
                         const coords = info.coords;
                         const tilePos = new THREE.Vector3(coords.x * this.world.tileSize, this.world.yOffset, coords.z * this.world.tileSize);
                         
-                        // Spawn Tree
                         if (Math.random() < 0.2) {
                             const pos = tilePos.clone().add(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).multiplyScalar(this.world.tileSize * 0.8));
                             this.resourceManager.createResource('tree', pos);
                         }
-                        // Spawn Rock
                         if (Math.random() < 0.1) {
                             const pos = tilePos.clone().add(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).multiplyScalar(this.world.tileSize * 0.8));
                             this.resourceManager.createResource('rock', pos);
                         }
-                        // Spawn Enemy
                         if (Math.random() < 0.05) {
-                            const pos = tilePos.clone().add(new THREE.Vector3(0, 0.3, 0)); // Enemies are slightly elevated
+                            const pos = tilePos.clone().add(new THREE.Vector3(0, 0.3, 0));
                             this.enemyManager.createEnemy(pos);
                         }
                     }
@@ -327,6 +353,7 @@ export class Game {
 
         const delta = this.clock.getDelta();
 
+        this.cycleManager.update(delta);
         this.player.update(delta);
         if (this.resourceManager) this.resourceManager.update();
         if (this.enemyManager) this.enemyManager.update(this.player, delta);
