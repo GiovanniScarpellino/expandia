@@ -51,7 +51,7 @@ export class Enemy {
 
         // --- BEHAVIOR ---
         this.speed = 0.01; // Reduced speed for more realistic animation sync
-        this.aggroRange = 5;
+        this.aggroRange = 10; // Increased aggro range to ensure they see the base
         this.attackRange = 1;
         this.attackCooldown = 1500; // 1.5 seconds
         this.lastAttackTime = 0;
@@ -76,7 +76,7 @@ export class Enemy {
         this.activeAction.fadeIn(0.2).play();
     }
 
-    update(player, delta) {
+    update(target, delta) {
         if (this.mixer) {
             this.mixer.update(delta);
         }
@@ -99,14 +99,14 @@ export class Enemy {
             return; // Don't move or do anything else while broken or attacking
         }
 
-        const distanceToPlayer = this.mesh.position.distanceTo(player.mesh.position);
+        const distanceToTarget = this.mesh.position.distanceTo(target.position);
 
-        if (distanceToPlayer < this.aggroRange) {
-            const direction = new THREE.Vector3().subVectors(player.mesh.position, this.mesh.position);
+        if (distanceToTarget < this.aggroRange) {
+            const direction = new THREE.Vector3().subVectors(target.position, this.mesh.position);
             const angle = Math.atan2(direction.x, direction.z);
             this.mesh.rotation.y = angle;
 
-            if (distanceToPlayer > this.attackRange) {
+            if (distanceToTarget > this.attackRange) {
                 direction.normalize();
                 this.mesh.position.add(direction.multiplyScalar(this.speed));
                 this.setActiveAction('walk');
@@ -114,7 +114,9 @@ export class Enemy {
                 const now = Date.now();
                 if (now - this.lastAttackTime > this.attackCooldown) {
                     this.setActiveAction('attack', true);
-                    player.takeDamage(this.attackDamage);
+                    if (target.userData && target.userData.takeDamage) {
+                        target.userData.takeDamage(this.attackDamage);
+                    }
                     this.lastAttackTime = now;
                 } else {
                     if (this.activeAction !== this.actions['attack']) {

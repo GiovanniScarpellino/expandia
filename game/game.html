@@ -19,6 +19,7 @@
         <div id="wood">Wood: 0</div>
         <div id="stone">Stone: 0</div>
         <div id="health">Health: 100</div>
+        <div id="base-health">Base Health: 1000</div>
         <div id="npc-count">NPCs: 0</div>
       </div>
       <div id="cycle-info" style="margin-top: 15px;">
@@ -30,6 +31,23 @@
         <button id="save-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Sauvegarder</button>
         <button id="delete-save-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Suppr. Sauvegarde</button>
         <button id="auto-mode-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Auto Mode</button>
+        <button id="build-menu-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Construire</button>
+      </div>
+    </div>
+
+    <!-- Build Menu -->
+    <div id="build-menu" class="menu" style="display: none;">
+      <div class="menu-content">
+        <div class="menu-header">
+          <h3>Menu de Construction</h3>
+          <button id="close-build-menu-button">&times;</button>
+        </div>
+        <div id="crafting-list">
+          <div class="crafting-item">
+            <span>Mur en bois (Coût: 5 Bois)</span>
+            <button class="craft-button" data-item="wooden_wall">Fabriquer</button>
+          </div>
+        </div>
       </div>
     </div>
 

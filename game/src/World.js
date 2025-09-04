@@ -7,6 +7,7 @@ export class World {
         this.scene = scene;
         this.tileSize = 2;
         this.tiles = {};
+        this.obstacles = new Set(); // Stores keys of occupied tiles for non-wall objects
         this.unlockedMaterial = new THREE.MeshStandardMaterial({ color: 0x556B2F });
         this.lockedMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, transparent: true, opacity: 0.5 });
     }
@@ -35,10 +36,66 @@ export class World {
         return { x, z };
     }
 
-    canMoveTo(position) {
+    addObstacle(mesh) {
+        mesh.geometry.computeBoundingBox();
+        const box = new THREE.Box3().copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+
+        const min = this.getTileCoordinates(box.min);
+        const max = this.getTileCoordinates(box.max);
+
+        for (let x = min.x; x <= max.x; x++) {
+            for (let z = min.z; z <= max.z; z++) {
+                const key = this.getTileKey(x, z);
+                this.obstacles.add(key);
+            }
+        }
+    }
+
+    removeObstacle(mesh) {
+        mesh.geometry.computeBoundingBox();
+        const box = new THREE.Box3().copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+
+        const min = this.getTileCoordinates(box.min);
+        const max = this.getTileCoordinates(box.max);
+
+        for (let x = min.x; x <= max.x; x++) {
+            for (let z = min.z; z <= max.z; z++) {
+                const key = this.getTileKey(x, z);
+                this.obstacles.delete(key);
+            }
+        }
+    }
+
+    isValidPlacement(position) {
         const { x, z } = this.getTileCoordinates(position);
         const key = this.getTileKey(x, z);
-        return this.tiles[key] && this.tiles[key].userData.unlocked;
+        const tile = this.tiles[key];
+        return tile && tile.userData.unlocked && !this.obstacles.has(key);
+    }
+
+    canMoveTo(position, walls = []) {
+        // 1. Check tile validity (unlocked, not an obstacle like a rock)
+        const { x, z } = this.getTileCoordinates(position);
+        const key = this.getTileKey(x, z);
+        const tile = this.tiles[key];
+        if (!tile || !tile.userData.unlocked || this.obstacles.has(key)) {
+            return false;
+        }
+
+        // 2. Check for collision with walls
+        const playerBox = new THREE.Box3().setFromCenterAndSize(
+            position,
+            new THREE.Vector3(0.5, 1, 0.5) // Player's approximate bounding box
+        );
+
+        for (const wall of walls) {
+            const wallBox = new THREE.Box3().setFromObject(wall.mesh);
+            if (playerBox.intersectsBox(wallBox)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     createTile(x, z, unlocked = false) {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { UI } from './UI.js';
 import { Player } from './Player.js';
 import { World } from './World.js';
+import { Wall } from './Wall.js';
 import { ResourceManager } from './managers/ResourceManager.js';
 import { EnemyManager } from './managers/EnemyManager.js';
 import { NPCManager } from './managers/NPCManager.js';
@@ -32,8 +33,12 @@ export class Game {
 
         this.wood = 0;
         this.stone = 0;
+        this.walls = [];
+        this.placementMode = null;
 
         this.ui = new UI();
+        this.ui.onCraft = (itemName) => this.craftItem(itemName);
+
         this.gameStateManager = new GameStateManager();
         this.cycleManager = new CycleManager(this.scene, this.ui);
         this.lampposts = [];
@@ -51,6 +56,15 @@ export class Game {
         this.player = new Player(this.scene, (pos) => this.world.canMoveTo(pos), this.models.player);
         this.inputHandler = new InputHandler(this);
         this.touchHandler = new TouchHandler(this);
+
+        // --- GHOST --- 
+        const ghostGeometry = new THREE.BoxGeometry(this.world.tileSize, 1, 0.1);
+        this.ghostMaterialValid = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+        this.ghostMaterialInvalid = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
+        this.ghostWall = new THREE.Mesh(ghostGeometry, this.ghostMaterialValid);
+        this.ghostWall.visible = false;
+        this.ghostWall.userData.edgeIndex = 0; // 0: front, 1: right, 2: back, 3: left
+        this.scene.add(this.ghostWall);
 
         this.isAutoMode = false;
         const autoModeButton = document.getElementById('auto-mode-button');
@@ -84,6 +98,21 @@ export class Game {
                 child.receiveShadow = true;
             }
         });
+
+        this.base.userData = {
+            health: 1000,
+            maxHealth: 1000,
+            takeDamage: (amount) => {
+                this.base.userData.health -= amount;
+                this.ui.updateBaseHealth(this.base.userData.health, this.base.userData.maxHealth);
+                if (this.base.userData.health <= 0) {
+                    this.base.userData.health = 0;
+                    this.gameOver();
+                }
+            }
+        };
+        this.ui.updateBaseHealth(this.base.userData.health, this.base.userData.maxHealth);
+
         this.scene.add(this.base);
 
         this.npcManager = new NPCManager(this.scene, this.base.position, this.models.npc);
@@ -93,6 +122,12 @@ export class Game {
 
         this.cycleManager.onNightStart = (wave) => this.startNight(wave);
         this.cycleManager.onDayStart = () => this.endNight();
+    }
+
+    gameOver() {
+        console.error("GAME OVER - La base a été détruite !");
+        this.clock.stop();
+        // TODO: Show a game over screen in the UI
     }
 
     initNewGame() {
@@ -186,6 +221,28 @@ export class Game {
 
     startNight(wave) {
         console.log(`La nuit ${wave} commence ! Les monstres arrivent !`);
+
+        const unlockedTiles = Object.values(this.world.tiles).filter(t => t.userData.unlocked);
+        if (unlockedTiles.length === 0) return;
+
+        const borderTiles = unlockedTiles.filter(tile => {
+            const { x, z } = tile.userData;
+            const neighbors = [{x: x+1, z}, {x: x-1, z}, {x, z: z+1}, {x, z: z-1}];
+            return neighbors.some(n => {
+                const key = this.world.getTileKey(n.x, n.z);
+                return !this.world.tiles[key] || !this.world.tiles[key].userData.unlocked;
+            });
+        });
+
+        const spawnTiles = borderTiles.length > 0 ? borderTiles : unlockedTiles;
+
+        const numEnemies = 1 + wave;
+        for (let i = 0; i < numEnemies; i++) {
+            const randomTile = spawnTiles[Math.floor(Math.random() * spawnTiles.length)];
+            const spawnPosition = randomTile.position.clone();
+            spawnPosition.y = 0;
+            this.enemyManager.createEnemy(spawnPosition);
+        }
     }
 
     endNight() {
@@ -318,6 +375,141 @@ export class Game {
         }
     }
 
+    craftItem(itemName) {
+        if (this.placementMode) return; // Already placing something
+
+        if (itemName === 'wooden_wall') {
+            const cost = 5;
+            if (this.wood >= cost) {
+                this.placementMode = 'wooden_wall';
+                this.ghostWall.visible = true;
+                this.ui.hideBuildMenu();
+            } else {
+                console.log('Not enough wood!'); // TODO: Show UI message
+            }
+        }
+    }
+
+    cancelPlacement() {
+        this.placementMode = null;
+        this.ghostWall.visible = false;
+    }
+
+    rotatePlacementGhost() {
+        if (!this.placementMode) return;
+        this.ghostWall.userData.edgeIndex = (this.ghostWall.userData.edgeIndex + 1) % 4;
+    }
+
+    updateGhostWallPosition() {
+        // 1. Determine placement direction based on player orientation and user rotation choice
+        const edgeIndex = this.ghostWall.userData.edgeIndex;
+        
+        const playerForward = new THREE.Vector3(0, 0, 1).applyEuler(this.player.mesh.rotation);
+        const playerRight = new THREE.Vector3(1, 0, 0).applyEuler(this.player.mesh.rotation);
+
+        let direction;
+        switch (edgeIndex) {
+            case 0: // Front
+                direction = playerForward;
+                break;
+            case 1: // Right
+                direction = playerRight;
+                break;
+            case 2: // Back
+                direction = playerForward.clone().negate();
+                break;
+            case 3: // Left
+                direction = playerRight.clone().negate();
+                break;
+        }
+
+        // 2. Get tile coordinates
+        const playerTileCoords = this.world.getTileCoordinates(this.player.mesh.position);
+        const playerTileCenter = new THREE.Vector3(playerTileCoords.x * this.world.tileSize, 0, playerTileCoords.z * this.world.tileSize);
+
+        const targetTileX = playerTileCoords.x + Math.round(direction.x);
+        const targetTileZ = playerTileCoords.z + Math.round(direction.z);
+        const targetTileCenter = new THREE.Vector3(targetTileX * this.world.tileSize, 0, targetTileZ * this.world.tileSize);
+
+        // 3. Calculate position on the edge between the two tiles
+        const edgeCenter = new THREE.Vector3().addVectors(playerTileCenter, targetTileCenter).multiplyScalar(0.5);
+
+        // 4. Set height correctly
+        const wallHeight = 1; // From BoxGeometry
+        edgeCenter.y = this.world.yOffset + wallHeight / 2;
+
+        this.ghostWall.position.copy(edgeCenter);
+
+        // 5. Align ghost rotation to the edge
+        this.ghostWall.rotation.y = Math.atan2(direction.x, direction.z);
+
+        // 6. Validate placement (check both tiles the wall is between)
+        const key1 = this.world.getTileKey(playerTileCoords.x, playerTileCoords.z);
+        const key2 = this.world.getTileKey(targetTileX, targetTileZ);
+        const tile1 = this.world.tiles[key1];
+        const tile2 = this.world.tiles[key2];
+        const isValid = tile1 && tile1.userData.unlocked && tile2 && tile2.userData.unlocked;
+
+        if (isValid) {
+            this.ghostWall.material = this.ghostMaterialValid;
+        } else {
+            this.ghostWall.material = this.ghostMaterialInvalid;
+        }
+    }
+
+    placeItem() {
+        if (!this.placementMode) return;
+
+        const cost = 5; // Wall cost
+        if (this.wood < cost) {
+            console.log("Not enough wood to place the wall!");
+            this.cancelPlacement();
+            return;
+        }
+
+        // Re-run validation logic before placing
+        const edgeIndex = this.ghostWall.userData.edgeIndex;
+        const playerForward = new THREE.Vector3(0, 0, 1).applyEuler(this.player.mesh.rotation);
+        const playerRight = new THREE.Vector3(1, 0, 0).applyEuler(this.player.mesh.rotation);
+        let direction;
+        switch (edgeIndex) {
+            case 0: direction = playerForward; break;
+            case 1: direction = playerRight; break;
+            case 2: direction = playerForward.clone().negate(); break;
+            case 3: direction = playerRight.clone().negate(); break;
+        }
+        const playerTileCoords = this.world.getTileCoordinates(this.player.mesh.position);
+        const targetTileX = playerTileCoords.x + Math.round(direction.x);
+        const targetTileZ = playerTileCoords.z + Math.round(direction.z);
+        const key1 = this.world.getTileKey(playerTileCoords.x, playerTileCoords.z);
+        const key2 = this.world.getTileKey(targetTileX, targetTileZ);
+        const tile1 = this.world.tiles[key1];
+        const tile2 = this.world.tiles[key2];
+        const isValid = tile1 && tile1.userData.unlocked && tile2 && tile2.userData.unlocked;
+
+        if (isValid) {
+            this.wood -= cost;
+            this.ui.updateWood(this.wood);
+
+            const wall = new Wall(this.scene, this.ghostWall.position.clone(), this.ghostWall.rotation.clone());
+            this.walls.push(wall);
+            this.world.addObstacle(wall.mesh);
+
+            this.placementMode = null;
+            this.ghostWall.visible = false;
+        } else {
+            console.log("Cannot place item here."); // TODO: UI feedback
+        }
+    }
+
+    destroyWall(wall) {
+        this.wood += 5; // Refund
+        this.ui.updateWood(this.wood);
+        this.world.removeObstacle(wall.mesh);
+        this.walls.splice(this.walls.indexOf(wall), 1);
+        wall.destroy();
+    }
+
     getClosestResource(maxDist) {
         let closestResource = null;
         let minDistance = Infinity;
@@ -329,6 +521,19 @@ export class Game {
             }
         });
         return minDistance < maxDist ? closestResource : null;
+    }
+
+    getClosestWall(maxDist) {
+        let closestWall = null;
+        let minDistance = Infinity;
+        this.walls.forEach(wall => {
+            const distance = this.player.mesh.position.distanceTo(wall.mesh.position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestWall = wall;
+            }
+        });
+        return minDistance < maxDist ? closestWall : null;
     }
 
     getClosestUnlockableTile(maxDist) {
@@ -347,6 +552,17 @@ export class Game {
     }
 
     doContextualAction() {
+        if (this.placementMode) {
+            this.placeItem();
+            return;
+        }
+
+        const wallToDestroy = this.getClosestWall(2);
+        if (wallToDestroy) {
+            this.destroyWall(wallToDestroy);
+            return;
+        }
+
         if (this.getClosestResource(1)) {
             this.playerHarvest();
         } else if (this.player.mesh.position.distanceTo(this.base.position) < 2 && this.wood >= this.npcManager.npcCost.wood && this.stone >= this.npcManager.npcCost.stone) {
@@ -361,10 +577,14 @@ export class Game {
 
         const delta = this.clock.getDelta();
 
+        if (this.placementMode) {
+            this.updateGhostWallPosition();
+        }
+
         this.cycleManager.update(delta);
         this.player.update(this, delta);
         if (this.resourceManager) this.resourceManager.update();
-        if (this.enemyManager) this.enemyManager.update(this.player, delta);
+        if (this.enemyManager) this.enemyManager.update(this.base, delta);
         if (this.npcManager) {
             this.npcManager.update(this.resourceManager.resources, this, delta);
             this.ui.updateNpcCount(this.npcManager.npcs.length);

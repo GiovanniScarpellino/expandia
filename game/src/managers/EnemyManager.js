@@ -16,10 +16,10 @@ export class EnemyManager {
         }
     }
 
-    update(player, delta) {
+    update(target, delta) {
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
-            enemy.update(player, delta);
+            enemy.update(target, delta);
 
             if (enemy.isReadyToBeRemoved) {
                 this.questManager.checkProgress('defeat_enemy', 1);
