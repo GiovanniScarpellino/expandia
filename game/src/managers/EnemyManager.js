@@ -1,39 +1,97 @@
-import { Enemy } from '../Enemy.js';
+import * as BABYLON from '@babylonjs/core';
+import { Enemy } from '../babylon/Enemy.js';
 
 export class EnemyManager {
-    constructor(scene, model, questManager) {
-        this.scene = scene;
+    constructor(game) {
+        this.game = game;
+        this.scene = game.scene;
         this.enemies = [];
-        this.model = model.scene;
-        this.animations = model.animations;
-        this.questManager = questManager;
+        this.waveInterval = null;
     }
 
-    createEnemy(position) {
-        if (this.model && this.animations) {
-            const enemy = new Enemy(this.scene, position, this.model.clone(), this.animations);
-            this.enemies.push(enemy);
+    startWave(waveNumber) {
+        console.log(`Starting wave ${waveNumber}`);
+        this.stopWave(); // Stop any previous wave
+
+        const enemyCount = 5 + waveNumber; // Increase enemies per wave
+        let spawnedCount = 0;
+
+        this.waveInterval = setInterval(() => {
+            if (spawnedCount >= enemyCount) {
+                this.stopWave();
+                return;
+            }
+            this.spawnEnemy();
+            spawnedCount++;
+        }, 2000); // Spawn an enemy every 2 seconds
+    }
+
+    stopWave() {
+        if (this.waveInterval) {
+            clearInterval(this.waveInterval);
+            this.waveInterval = null;
         }
     }
 
-    update(target, delta) {
+    despawnAll() {
+        this.enemies.forEach(enemy => enemy.dispose());
+        this.enemies = [];
+    }
+
+    spawnEnemy() {
+        const spawnPosition = this.findValidSpawnPosition();
+        if (!spawnPosition) {
+            console.warn("Could not find a valid spawn position for an enemy.");
+            return;
+        }
+
+        const modelData = this.game.models.player; // Using player model as placeholder
+        const newMesh = modelData.mesh.clone(`enemy_${this.enemies.length}`);
+        newMesh.position = spawnPosition;
+
+        const enemy = new Enemy(this.game, this.scene, newMesh, modelData.animationGroups);
+        this.enemies.push(enemy);
+        this.game.addShadowCaster(newMesh); // Make enemies cast shadows
+    }
+
+    findValidSpawnPosition() {
+        const unlockedTiles = Object.values(this.game.world.tiles).filter(t => t.metadata.unlocked);
+        const lockedBorderTiles = [];
+
+        const offsets = [{x: 1, z: 0}, {x: -1, z: 0}, {x: 0, z: 1}, {x: 0, z: -1}];
+
+        for (const tile of unlockedTiles) {
+            const { x, z } = tile.metadata;
+            for (const offset of offsets) {
+                const key = this.game.world.getTileKey(x + offset.x, z + offset.z);
+                if (this.game.world.tiles[key] && !this.game.world.tiles[key].metadata.unlocked) {
+                    lockedBorderTiles.push(this.game.world.tiles[key]);
+                }
+            }
+        }
+
+        if (lockedBorderTiles.length === 0) {
+            // Fallback if no border tiles found (e.g. start of game)
+            return new BABYLON.Vector3(5, 0, 5);
+        }
+
+        const randomTile = lockedBorderTiles[Math.floor(Math.random() * lockedBorderTiles.length)];
+        return randomTile.position.clone();
+    }
+
+    update(delta) {
+        const target = this.game.base; // Enemies target the base
+        if (!target) return;
+
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             enemy.update(target, delta);
 
             if (enemy.isReadyToBeRemoved) {
-                this.questManager.checkProgress('defeat_enemy', 1);
-                enemy.destroy();
+                // Optional: Add quest progress logic here if needed
+                enemy.dispose();
                 this.enemies.splice(i, 1);
             }
-        }
-    }
-    
-    removeEnemy(enemy) {
-        const index = this.enemies.indexOf(enemy);
-        if (index > -1) {
-            this.enemies.splice(index, 1);
-            enemy.destroy();
         }
     }
 }
