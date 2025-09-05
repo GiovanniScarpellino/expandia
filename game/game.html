@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <link rel="stylesheet" href="/src/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Expandia</title>
   </head>
@@ -12,28 +13,41 @@
       <div class="spinner"></div>
       <p>Chargement...</p>
     </div>
+
+    <!-- HUD -->
     <div id="hud">
-      <a href="./index.html">Retour au menu (Comment jouer)</a>
-      <div id="quest"></div>
-      <div>
-        <div id="wood">Wood: 0</div>
-        <div id="stone">Stone: 0</div>
-        <div id="health">Health: 100</div>
-        <div id="base-health">Base Health: 1000</div>
-        <div id="npc-count">NPCs: 0</div>
+      <!-- Top Left - Resources -->
+      <div id="resources">
+        <div id="wood" class="resource-item"><i class="fas fa-tree"></i> <span>0</span></div>
+        <div id="stone" class="resource-item"><i class="fas fa-gem"></i> <span>0</span></div>
       </div>
-      <div id="cycle-info" style="margin-top: 15px;">
-        <div id="day-counter">Jour: 1</div>
-        <div id="cycle-status">Phase: Jour</div>
-        <div id="cycle-timer">Temps restant: 00:00</div>
+
+      <!-- Top Right - Cycle Info -->
+      <div id="cycle-info">
+        <div id="day-counter">Jour 1</div>
+        <div id="cycle-status"></div>
+        <div id="cycle-timer"></div>
       </div>
-      <div id="save-controls" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <button id="save-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Sauvegarder</button>
-        <button id="delete-save-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Suppr. Sauvegarde</button>
-        <button id="auto-mode-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Auto Mode</button>
-        <button id="build-menu-button" style="font-size: 12px; padding: 5px 8px; cursor: pointer;">Construire</button>
+      
+      <!-- Top Center - Player Stats -->
+      <div id="player-stats">
+        <div id="health"><i class="fas fa-heart"></i> 100</div>
+        <div id="base-health"><i class="fas fa-shield-alt"></i> 1000</div>
+        <div id="npc-count"><i class="fas fa-users"></i> 0</div>
       </div>
+
+      <!-- Bottom Center - Actions -->
+      <div id="actions">
+        <button id="build-menu-button" class="action-button"><i class="fas fa-hammer"></i></button>
+      </div>
+      
+      <a id="help-link" href="./index.html"><i class="fas fa-question-circle"></i></a>
     </div>
+    
+    <div id="quest-container">
+        <div id="quest"></div>
+    </div>
+
 
     <!-- Build Menu -->
     <div id="build-menu" class="menu" style="display: none;">
@@ -44,8 +58,14 @@
         </div>
         <div id="crafting-list">
           <div class="crafting-item">
-            <span>Mur en bois (Coût: 5 Bois)</span>
-            <button class="craft-button" data-item="wall">Fabriquer</button>
+            <div class="crafting-item-info">
+                <i class="fas fa-wall"></i>
+                <span>Mur en bois</span>
+            </div>
+            <div class="crafting-item-action">
+                <span class="crafting-cost">(5 <i class="fas fa-tree"></i>)</span>
+                <button class="craft-button" data-item="wall">Fabriquer</button>
+            </div>
           </div>
         </div>
       </div>

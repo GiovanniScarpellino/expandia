@@ -1,28 +1,27 @@
 export class UI {
     constructor() {
-        // Existing elements
-        this.woodDiv = document.getElementById('wood');
-        this.stoneDiv = document.getElementById('stone');
+        // Resource elements
+        this.woodSpan = document.querySelector('#wood span');
+        this.stoneSpan = document.querySelector('#stone span');
+
+        // Player stats elements
         this.healthDiv = document.getElementById('health');
         this.baseHealthDiv = document.getElementById('base-health');
-        this.questDiv = document.getElementById('quest');
         this.npcCountDiv = document.getElementById('npc-count');
+
+        // Cycle elements
         this.dayCounterDiv = document.getElementById('day-counter');
         this.cycleStatusDiv = document.getElementById('cycle-status');
         this.cycleTimerDiv = document.getElementById('cycle-timer');
+
+        // Quest element
+        this.questDiv = document.getElementById('quest');
 
         // Build menu elements
         this.buildMenuButton = document.getElementById('build-menu-button');
         this.closeBuildMenuButton = document.getElementById('close-build-menu-button');
         this.buildMenu = document.getElementById('build-menu');
         this.craftButtons = document.querySelectorAll('.craft-button');
-
-        // Initial state
-        this.updateWood(0);
-        this.updateStone(0);
-        this.updateHealth(100);
-        this.updateQuest("En attente d'un objectif...");
-        this.updateNpcCount(0);
 
         // Save indicator
         this.saveIndicatorDiv = document.createElement('div');
@@ -33,26 +32,32 @@ export class UI {
         // Crafting callback
         this.onCraft = null;
 
+        // Initial state
+        this.updateWood(0);
+        this.updateStone(0);
+        this.updateHealth(100);
+        this.updateBaseHealth(1000, 1000);
+        this.updateNpcCount(0);
+        this.updateQuest("Trouvez des ressources pour survivre.");
+
         // Event Listeners
-        this.buildMenuButton.addEventListener('click', () => this.showBuildMenu());
-        this.closeBuildMenuButton.addEventListener('click', () => this.hideBuildMenu());
+        this.buildMenuButton.addEventListener('click', () => this.toggleBuildMenu());
+        this.closeBuildMenuButton.addEventListener('click', () => this.toggleBuildMenu(false));
 
         this.craftButtons.forEach(button => {
             button.addEventListener('click', (event) => {
-                const itemName = event.target.dataset.item;
+                const itemName = event.currentTarget.dataset.item;
                 if (this.onCraft) {
                     this.onCraft(itemName);
                 }
+                this.toggleBuildMenu(false); // Close menu after crafting
             });
         });
     }
 
-    showBuildMenu() {
-        this.buildMenu.style.display = 'flex';
-    }
-
-    hideBuildMenu() {
-        this.buildMenu.style.display = 'none';
+    toggleBuildMenu(forceState) {
+        const shouldShow = forceState === undefined ? this.buildMenu.style.display === 'none' : forceState;
+        this.buildMenu.style.display = shouldShow ? 'flex' : 'none';
     }
 
     showSaveIndicator() {
@@ -63,24 +68,28 @@ export class UI {
     }
 
     updateWood(amount) {
-        this.woodDiv.innerText = `Bois: ${amount}`;
+        this.woodSpan.innerText = amount;
     }
 
     updateStone(amount) {
-        this.stoneDiv.innerText = `Pierre: ${amount}`;
+        this.stoneSpan.innerText = amount;
     }
 
     updateHealth(amount) {
-        this.healthDiv.innerText = `Vie: ${amount}`;
+        this.healthDiv.innerHTML = `<i class="fas fa-heart"></i> ${amount}`;
     }
 
     updateBaseHealth(health, maxHealth) {
-        this.baseHealthDiv.innerText = `Vie de la base: ${health} / ${maxHealth}`;
+        this.baseHealthDiv.innerHTML = `<i class="fas fa-shield-alt"></i> ${health}`;
     }
 
     updateQuest(text) {
-        this.showQuest();
-        this.questDiv.innerHTML = `Objectif: ${text}`;
+        if (text) {
+            this.questDiv.innerHTML = text;
+            this.showQuest();
+        } else {
+            this.hideQuest();
+        }
     }
 
     hideQuest() {
@@ -92,15 +101,16 @@ export class UI {
     }
 
     updateNpcCount(count) {
-        this.npcCountDiv.innerText = `PNJs: ${count}`;
+        this.npcCountDiv.innerHTML = `<i class="fas fa-users"></i> ${count}`;
     }
 
     updateCycle(isDay, timeOfDay, daysSurvived) {
-        this.dayCounterDiv.innerText = `Jour: ${daysSurvived}`;
-        this.cycleStatusDiv.innerText = `Phase: ${isDay ? 'Jour' : 'Nuit'}`;
+        this.dayCounterDiv.innerText = `Jour ${daysSurvived}`;
+        this.cycleStatusDiv.innerText = isDay ? 'Jour' : 'Nuit';
 
-        const minutes = Math.floor(timeOfDay / 60000);
-        const seconds = ((timeOfDay % 60000) / 1000).toFixed(0);
-        this.cycleTimerDiv.innerText = `Temps restant: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const totalSeconds = Math.floor(timeOfDay / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        this.cycleTimerDiv.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 }
