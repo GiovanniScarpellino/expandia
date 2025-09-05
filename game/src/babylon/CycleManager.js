@@ -38,6 +38,7 @@ export class CycleManager {
         this.moon.material = moonMat;
 
         this.lampposts = [];
+        this.paused = false;
     }
 
     setLampposts(lampposts) {
@@ -45,6 +46,12 @@ export class CycleManager {
     }
 
     update(delta) {
+        if (this.paused) {
+            // If paused, we still need to update the UI, but not advance time
+            this.ui.updateCycle(this.isDay, this.timeOfDay, this.daysSurvived);
+            return;
+        }
+
         this.timeOfDay -= delta * 1000;
 
         let progress;

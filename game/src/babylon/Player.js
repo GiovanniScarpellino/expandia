@@ -48,7 +48,7 @@ export class Player {
         const keydown = (e) => {
             // Prevent actions if player is busy or build menu is open
             if (this.isHarvesting || this.game.ui.buildMenu.style.display === 'flex') {
-                if(e.key === 'Escape') this.game.ui.hideBuildMenu(); // Still allow closing menu
+                if(e.key === 'Escape') this.game.ui.toggleBuildMenu(false); // Still allow closing menu
                 return;
             }
 
@@ -63,7 +63,7 @@ export class Player {
                     }
                     break;
                 case 'b':
-                    this.game.ui.showBuildMenu();
+                    this.game.ui.toggleBuildMenu(true);
                     break;
                 case 'Escape':
                     if (this.game.buildingManager.isBuildingMode) {

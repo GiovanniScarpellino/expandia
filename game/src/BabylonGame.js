@@ -20,13 +20,17 @@ export class BabylonGame {
         this.enemyManager = null;
         this.buildingManager = null;
         this.camera = null;
-        this.cameraOffset = new BABYLON.Vector3(0, 4, -3);
+        this.cameraOffset = new BABYLON.Vector3(0, 10, -8); // Increased offset for better view
         this.models = {};
         this.base = null;
         this.highlightLayer = null;
         this.cycleManager = null;
         this.hemisphericLight = null;
         this.mainShadowGenerator = null;
+
+        this.isPaused = false;
+        this.cameraKeys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+        this.freeCameraSpeed = 0.05; // Reduced camera speed
 
         // Inventory
         this.wood = 10; // Start with some wood
@@ -41,6 +45,7 @@ export class BabylonGame {
         this.scene = new BABYLON.Scene(this.engine);
         await this.loadModels();
         this.createScene();
+        this.setupCameraControls();
     }
 
     createCanvas() {
@@ -81,6 +86,7 @@ export class BabylonGame {
     createScene() {
         this.highlightLayer = new BABYLON.HighlightLayer("hl1", this.scene);
         this.camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(0, 10, -10), this.scene);
+        this.camera.inputs.clear(); // We will handle camera inputs manually
 
         const light = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-0.5, -1, -0.5), this.scene);
         light.position = new BABYLON.Vector3(20, 40, 20);
@@ -147,6 +153,56 @@ export class BabylonGame {
         this.player = new Player(this, playerMesh, this.scene, animationGroups);
 
         this.camera.setTarget(this.player.mesh.position);
+    }
+
+    setupCameraControls() {
+        window.addEventListener('keydown', (e) => {
+            if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
+                this.cameraKeys[e.key] = true;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
+                this.cameraKeys[e.key] = false;
+            }
+        });
+        window.addEventListener('wheel', (e) => {
+            const zoomSpeed = 0.2; // Reduced zoom speed
+            // Adjust the camera offset for zooming
+            let newY = this.cameraOffset.y + (e.deltaY > 0 ? zoomSpeed : -zoomSpeed);
+            let newZ = this.cameraOffset.z - (e.deltaY > 0 ? zoomSpeed * 0.75 : -zoomSpeed * 0.75);
+            
+            // Clamp the zoom levels
+            this.cameraOffset.y = Math.max(5, Math.min(25, newY));
+            this.cameraOffset.z = Math.min(-4, Math.max(-20, newZ));
+        }, { passive: true });
+    }
+
+    updateFreeCamera() {
+        const moveDirection = new BABYLON.Vector3(0, 0, 0);
+        if (this.cameraKeys.ArrowUp) moveDirection.z += 1;
+        if (this.cameraKeys.ArrowDown) moveDirection.z -= 1;
+        if (this.cameraKeys.ArrowLeft) moveDirection.x -= 1;
+        if (this.cameraKeys.ArrowRight) moveDirection.x += 1;
+
+        if (moveDirection.lengthSquared() > 0) {
+            moveDirection.normalize();
+            const cameraMoveVector = moveDirection.scale(this.freeCameraSpeed);
+            
+            const target = this.camera.getTarget();
+            target.addInPlace(cameraMoveVector);
+            this.camera.setTarget(target);
+        }
+        // Update camera position based on the potentially new target and offset
+        this.camera.position = this.camera.getTarget().add(this.cameraOffset);
+    }
+
+    setPaused(isPaused) {
+        this.isPaused = isPaused;
+        this.cycleManager.paused = isPaused;
+        if (isPaused) {
+            this.camera.setTarget(this.player.mesh.position.clone());
+        }
     }
 
     addShadowCaster(mesh) {
@@ -245,22 +301,33 @@ export class BabylonGame {
             const delta = this.engine.getDeltaTime() / 1000;
 
             this.updateInteractionHighlights();
-            this.cycleManager.update(delta);
-
-            if (this.player) {
-                this.player.update(delta);
-                this.camera.position = this.player.mesh.position.add(this.cameraOffset);
-                this.camera.setTarget(this.player.mesh.position);
+            
+            if (this.buildingManager.isBuildingMode) {
+                this.updateFreeCamera();
+            } else {
+                if (this.player) {
+                    this.camera.position = this.player.mesh.position.add(this.cameraOffset);
+                    this.camera.setTarget(this.player.mesh.position);
+                }
             }
+
+            if (!this.isPaused) {
+                this.cycleManager.update(delta);
+                if (this.player) {
+                    this.player.update(delta);
+                }
+                if (this.enemyManager) {
+                    this.enemyManager.update(delta);
+                }
+            }
+            
             if (this.resourceManager) {
                 this.resourceManager.update();
-            }
-            if (this.enemyManager) {
-                this.enemyManager.update(delta);
             }
             if (this.buildingManager) {
                 this.buildingManager.update();
             }
+
             this.scene.render();
         });
 
