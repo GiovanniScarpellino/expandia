@@ -29,8 +29,10 @@ export class BabylonGame {
         this.mainShadowGenerator = null;
 
         this.isPaused = false;
-        this.cameraKeys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-        this.freeCameraSpeed = 0.05; // Reduced camera speed
+        this.cameraKeys = { z: false, s: false, q: false, d: false };
+        this.freeCameraSpeed = 3; // units per second
+        this.freeCameraTarget = new BABYLON.Vector3(0, 0, 0);
+        this.latestDragMousePosition = { x: 0, y: 0 };
 
         // Inventory
         this.wood = 10; // Start with some wood
@@ -109,7 +111,8 @@ export class BabylonGame {
         this.world.init();
 
         // Connect UI to managers
-        this.ui.onCraft = (itemType) => this.buildingManager.enterBuildMode(itemType);
+        this.ui.onBuildMenuToggled = (isOpen) => this.buildingManager.toggleBuildMode(isOpen);
+        this.ui.onDragStart = (itemType) => this.buildingManager.startPlacement(itemType);
 
         // Connect managers to game cycles
         this.cycleManager.onNightStart = (day) => this.enemyManager.startWave(day);
@@ -153,6 +156,18 @@ export class BabylonGame {
         this.player = new Player(this, playerMesh, this.scene, animationGroups);
 
         this.camera.setTarget(this.player.mesh.position);
+
+        // Setup canvas drop zone
+        this.canvas.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            this.latestDragMousePosition = { x: event.clientX, y: event.clientY };
+        });
+
+        this.canvas.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const itemType = event.dataTransfer.getData('text/plain');
+            this.buildingManager.confirmPlacement(itemType);
+        });
     }
 
     setupCameraControls() {
@@ -178,23 +193,25 @@ export class BabylonGame {
         }, { passive: true });
     }
 
-    updateFreeCamera() {
+    updateFreeCamera(delta) {
         const moveDirection = new BABYLON.Vector3(0, 0, 0);
-        if (this.cameraKeys.ArrowUp) moveDirection.z += 1;
-        if (this.cameraKeys.ArrowDown) moveDirection.z -= 1;
-        if (this.cameraKeys.ArrowLeft) moveDirection.x -= 1;
-        if (this.cameraKeys.ArrowRight) moveDirection.x += 1;
+        if (this.cameraKeys.z) moveDirection.z += 1;
+        if (this.cameraKeys.s) moveDirection.z -= 1;
+        if (this.cameraKeys.q) moveDirection.x -= 1;
+        if (this.cameraKeys.d) moveDirection.x += 1;
 
         if (moveDirection.lengthSquared() > 0) {
             moveDirection.normalize();
-            const cameraMoveVector = moveDirection.scale(this.freeCameraSpeed);
-            
-            const target = this.camera.getTarget();
-            target.addInPlace(cameraMoveVector);
-            this.camera.setTarget(target);
+            const moveVector = moveDirection.scale(this.freeCameraSpeed * delta);
+            const newTarget = this.freeCameraTarget.clone().add(moveVector);
+
+            if (this.world.isPositionNearUnlockedTile(newTarget)) {
+                this.freeCameraTarget.copyFrom(newTarget);
+            }
         }
-        // Update camera position based on the potentially new target and offset
-        this.camera.position = this.camera.getTarget().add(this.cameraOffset);
+        
+        this.camera.setTarget(this.freeCameraTarget);
+        this.camera.position = this.freeCameraTarget.clone().add(this.cameraOffset);
     }
 
     setPaused(isPaused) {
@@ -297,13 +314,17 @@ export class BabylonGame {
             return;
         }
 
+        document.addEventListener('dragend', (event) => {
+            this.buildingManager.cancelPlacement();
+        });
+
         this.engine.runRenderLoop(() => {
             const delta = this.engine.getDeltaTime() / 1000;
 
             this.updateInteractionHighlights();
             
             if (this.buildingManager.isBuildingMode) {
-                this.updateFreeCamera();
+                this.updateFreeCamera(delta);
             } else {
                 if (this.player) {
                     this.camera.position = this.player.mesh.position.add(this.cameraOffset);

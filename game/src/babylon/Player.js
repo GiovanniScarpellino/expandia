@@ -15,7 +15,7 @@ export class Player {
         this.acceleration = 0.005;
         this.deceleration = 0.01;
 
-        this.keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+        this.keys = { z: false, s: false, q: false, d: false };
         this.inputHandler = this.setupInput();
 
         // Animations
@@ -114,7 +114,7 @@ export class Player {
             return; 
         }
 
-        const isMoving = this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
+        const isMoving = this.keys.z || this.keys.s || this.keys.q || this.keys.d;
         this.targetSpeed = isMoving ? this.walkSpeed : 0;
 
         if (this.currentSpeed < this.targetSpeed) {
@@ -130,10 +130,10 @@ export class Player {
         }
 
         const direction = new BABYLON.Vector3(0, 0, 0);
-        if (this.keys.ArrowUp) direction.z += 1;
-        if (this.keys.ArrowDown) direction.z -= 1;
-        if (this.keys.ArrowLeft) direction.x -= 1;
-        if (this.keys.ArrowRight) direction.x += 1;
+        if (this.keys.z) direction.z += 1;
+        if (this.keys.s) direction.z -= 1;
+        if (this.keys.q) direction.x -= 1;
+        if (this.keys.d) direction.x += 1;
 
         if (direction.lengthSquared() > 0) {
             direction.normalize();

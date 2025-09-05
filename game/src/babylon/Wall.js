@@ -11,7 +11,7 @@ export class Wall {
         this.mesh.rotationQuaternion = rotation;
         
         const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
-        wallMat.diffuseColor = new BABYLON.Color3.FromHexString("#8B4513"); // SaddleBrown
+        wallMat.diffuseColor = BABYLON.Color3.FromHexString("#8B4513"); // SaddleBrown
         this.mesh.material = wallMat;
 
         this.mesh.receiveShadows = true;

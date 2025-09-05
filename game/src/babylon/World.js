@@ -45,6 +45,20 @@ export class World {
         return tile && tile.metadata.unlocked;
     }
 
+    isPositionNearUnlockedTile(position) {
+        const { x, z } = this.getTileCoordinates(position);
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                const key = this.getTileKey(x + i, z + j);
+                const tile = this.tiles[key];
+                if (tile && tile.metadata.unlocked) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     createTile(x, z, unlocked = false) {
         const key = this.getTileKey(x, z);
         if (this.tiles[key]) {

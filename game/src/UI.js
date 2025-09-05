@@ -21,7 +21,7 @@ export class UI {
         this.buildMenuButton = document.getElementById('build-menu-button');
         this.closeBuildMenuButton = document.getElementById('close-build-menu-button');
         this.buildMenu = document.getElementById('build-menu');
-        this.craftButtons = document.querySelectorAll('.craft-button');
+        this.craftingItems = document.querySelectorAll('.crafting-item');
 
         // Save indicator
         this.saveIndicatorDiv = document.createElement('div');
@@ -29,8 +29,9 @@ export class UI {
         this.saveIndicatorDiv.innerText = 'Partie sauvegardée !';
         document.body.appendChild(this.saveIndicatorDiv);
 
-        // Crafting callback
-        this.onCraft = null;
+        // Callbacks
+        this.onBuildMenuToggled = null; // To notify game about menu state
+        this.onDragStart = null;
 
         // Initial state
         this.updateWood(0);
@@ -43,21 +44,54 @@ export class UI {
         // Event Listeners
         this.buildMenuButton.addEventListener('click', () => this.toggleBuildMenu());
         this.closeBuildMenuButton.addEventListener('click', () => this.toggleBuildMenu(false));
+        this.makeDraggable(this.buildMenu, this.buildMenu.querySelector('.panel-header'));
 
-        this.craftButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                const itemName = event.currentTarget.dataset.item;
-                if (this.onCraft) {
-                    this.onCraft(itemName);
+        this.craftingItems.forEach(item => {
+            item.addEventListener('dragstart', (event) => {
+                const itemType = event.currentTarget.dataset.item;
+                event.dataTransfer.setData('text/plain', itemType);
+                if (this.onDragStart) {
+                    this.onDragStart(itemType);
                 }
-                this.toggleBuildMenu(false); // Close menu after crafting
             });
         });
     }
 
+    makeDraggable(element, handle) {
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        const onMouseDown = (e) => {
+            isDragging = true;
+            offsetX = e.clientX - element.offsetLeft;
+            offsetY = e.clientY - element.offsetTop;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            element.style.left = `${e.clientX - offsetX}px`;
+            element.style.top = `${e.clientY - offsetY}px`;
+            // Remove transform to prevent conflict with positioning
+            element.style.transform = ''; 
+        };
+
+        const onMouseUp = () => {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        handle.addEventListener('mousedown', onMouseDown);
+    }
+
     toggleBuildMenu(forceState) {
         const shouldShow = forceState === undefined ? this.buildMenu.style.display === 'none' : forceState;
-        this.buildMenu.style.display = shouldShow ? 'flex' : 'none';
+        this.buildMenu.style.display = shouldShow ? 'block' : 'none';
+        if (this.onBuildMenuToggled) {
+            this.onBuildMenuToggled(shouldShow);
+        }
     }
 
     showSaveIndicator() {

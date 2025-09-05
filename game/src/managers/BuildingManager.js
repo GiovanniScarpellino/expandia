@@ -5,68 +5,111 @@ export class BuildingManager {
     constructor(game) {
         this.game = game;
         this.scene = game.scene;
+
+        // State
         this.isBuildingMode = false;
-        this.ghostMesh = null;
+        this.isPlacing = false;
+        this.currentItemType = null;
         this.canPlace = false;
+
+        // Ghost Mesh
+        this.ghostMesh = null;
         this.placementRotation = 0;
 
-        this.wallCost = 5;
-
-        this.inputObserver = null;
-    }
-
-    enterBuildMode(itemType) {
-        if (itemType !== 'wall') return;
-
-        if (this.game.wood < this.wallCost) {
-            console.log("Not enough wood.");
-            this.game.ui.toggleBuildMenu(false);
-            return;
-        }
-
-        this.isBuildingMode = true;
-        this.game.setPaused(true);
-        this.createGhostMesh();
-        this.game.ui.toggleBuildMenu(false);
-        console.log("Entered building mode. Use mouse to place, R to rotate, Esc to exit.");
-
-        // Listen for clicks and key presses
-        this.inputObserver = this.scene.onPointerObservable.add((pointerInfo) => {
-            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-                this.placeItem();
-            }
-        });
+        // Costs
+        this.itemCosts = {
+            wall: { wood: 5, stone: 0 }
+        };
 
         window.addEventListener('keydown', this.handleKeyPress);
     }
 
-    exitBuildMode() {
-        if (!this.isBuildingMode) return;
-        this.isBuildingMode = false;
-        this.game.setPaused(false);
-        this.destroyGhostMesh();
-        console.log("Exited building mode.");
+    toggleBuildMode(isOpen) {
+        this.isBuildingMode = isOpen;
+        this.game.setPaused(isOpen);
 
-        this.scene.onPointerObservable.remove(this.inputObserver);
-        window.removeEventListener('keydown', this.handleKeyPress);
+        if (isOpen) {
+            this.game.freeCameraTarget.copyFrom(this.game.player.mesh.position);
+        } else {
+            this.cancelPlacement();
+        }
+    }
+
+    startPlacement(itemType) {
+        if (!this.isBuildingMode) return;
+
+        const cost = this.itemCosts[itemType];
+        if (this.game.wood < cost.wood || this.game.stone < cost.stone) {
+            console.log("Not enough resources.");
+            return;
+        }
+
+        this.isPlacing = true;
+        this.currentItemType = itemType;
+        this.createGhostMesh(itemType);
+    }
+
+    cancelPlacement() {
+        if (!this.isPlacing) return;
+        this.isPlacing = false;
+        this.currentItemType = null;
+        this.destroyGhostMesh();
+    }
+
+    confirmPlacement(itemType) {
+        if (!this.isPlacing || !this.canPlace || this.currentItemType !== itemType) {
+            this.cancelPlacement();
+            return;
+        }
+
+        const cost = this.itemCosts[itemType];
+        if (this.game.wood >= cost.wood && this.game.stone >= cost.stone) {
+            this.game.addResource('tree', -cost.wood);
+            this.game.addResource('rock', -cost.stone);
+
+            if (itemType === 'wall') {
+                const newWall = new Wall(this.scene, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
+                this.game.addShadowCaster(newWall.mesh);
+            }
+            
+            console.log(`${itemType} placed.`);
+        } else {
+            console.log("Not enough resources!");
+        }
+        
+        // Keep placing the same item if resources are available
+        const newCost = this.itemCosts[this.currentItemType];
+        if (this.game.wood < newCost.wood || this.game.stone < newCost.stone) {
+            this.cancelPlacement();
+        }
     }
 
     handleKeyPress = (e) => {
-        if (!this.isBuildingMode) return;
-        if (e.key === 'Escape') {
-            this.exitBuildMode();
-        }
+        if (!this.isPlacing) return;
         if (e.key === 'r' || e.key === 'R') {
             this.placementRotation += Math.PI / 2;
+            e.preventDefault();
+        }
+        if (e.key === 'Escape') {
+            this.cancelPlacement();
+            e.preventDefault();
         }
     }
 
-    createGhostMesh() {
-        this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
-        const ghostMat = new BABYLON.StandardMaterial("ghostMat", this.scene);
-        ghostMat.alpha = 0.5;
-        this.ghostMesh.material = ghostMat;
-        this.ghostMesh.isPickable = false;
+    createGhostMesh(itemType) {
+        if (this.ghostMesh) this.ghostMesh.dispose();
+
+        if (itemType === 'wall') {
+            this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
+        }
+        // Add other item types here
+        
+        if (this.ghostMesh) {
+            const ghostMat = new BABYLON.StandardMaterial("ghostMat", this.scene);
+            ghostMat.alpha = 0.5;
+            this.ghostMesh.material = ghostMat;
+            this.ghostMesh.isPickable = false;
+        }
     }
 
     destroyGhostMesh() {
@@ -77,62 +120,60 @@ export class BuildingManager {
     }
 
     update() {
-        if (!this.isBuildingMode || !this.ghostMesh) return;
+        if (!this.isPlacing || !this.ghostMesh) return;
 
-        const pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name.startsWith("tile-"));
-        
-        if (pickInfo.hit && pickInfo.pickedMesh.metadata.unlocked) {
-            const tile = pickInfo.pickedMesh;
+        const mouseX = this.game.latestDragMousePosition.x;
+        const mouseY = this.game.latestDragMousePosition.y;
+        const pickInfo = this.scene.pick(mouseX, mouseY);
+
+        if (pickInfo.hit) {
             const pickPoint = pickInfo.pickedPoint;
+            const tileSize = this.game.world.tileSize;
+            const halfTile = tileSize / 2;
 
-            // Determine position and rotation based on cursor position relative to tile center
-            const relativePos = pickPoint.subtract(tile.position);
+            // Snap to the center of the nearest edge
+            const snappedX = Math.round(pickPoint.x / halfTile) * halfTile;
+            const snappedZ = Math.round(pickPoint.z / halfTile) * halfTile;
+            const snappedPosition = new BABYLON.Vector3(snappedX, 0.5, snappedZ);
             
-            let snappedPosition = new BABYLON.Vector3();
-            let snappedRotation = BABYLON.Quaternion.FromEulerAngles(0, this.placementRotation, 0);
+            this.ghostMesh.position = snappedPosition;
+            this.ghostMesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, this.placementRotation, 0);
 
-            const threshold = 0.5; // 50% of the half-width of the tile
+            // Check for validity
+            const x_is_edge = (Math.abs(Math.round(snappedX / halfTile)) % 2) !== 0;
+            const z_is_edge = (Math.abs(Math.round(snappedZ / halfTile)) % 2) !== 0;
 
-            if (Math.abs(relativePos.x) > Math.abs(relativePos.z)) {
-                // Closer to a vertical edge (left/right)
-                snappedPosition.x = tile.position.x + Math.sign(relativePos.x);
-                snappedPosition.z = Math.round(pickPoint.z);
-            } else {
-                // Closer to a horizontal edge (top/bottom)
-                snappedPosition.x = Math.round(pickPoint.x);
-                snappedPosition.z = tile.position.z + Math.sign(relativePos.z);
+            let tile1_coords = null;
+            let tile2_coords = null;
+
+            if (x_is_edge && !z_is_edge) { // Vertical edge
+                tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX - 0.1, 0, snappedZ));
+                tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX + 0.1, 0, snappedZ));
+            } else if (!x_is_edge && z_is_edge) { // Horizontal edge
+                tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX, 0, snappedZ - 0.1));
+                tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX, 0, snappedZ + 0.1));
             }
 
-            snappedPosition.y = 0.5; // Half of wall height
+            if (tile1_coords && tile2_coords) {
+                const tile1 = this.game.world.tiles[this.game.world.getTileKey(tile1_coords.x, tile1_coords.z)];
+                const tile2 = this.game.world.tiles[this.game.world.getTileKey(tile2_coords.x, tile2_coords.z)];
 
-            this.ghostMesh.position = snappedPosition;
-            this.ghostMesh.rotationQuaternion = snappedRotation;
-
-            this.canPlace = true;
-            this.ghostMesh.material.emissiveColor = BABYLON.Color3.Green();
+                if ((tile1 && tile1.metadata.unlocked) || (tile2 && tile2.metadata.unlocked)) {
+                    this.canPlace = true;
+                    this.ghostMesh.material.emissiveColor = BABYLON.Color3.Green();
+                } else {
+                    this.canPlace = false;
+                    this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
+                }
+            } else {
+                this.canPlace = false;
+                this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
+            }
         } else {
             this.canPlace = false;
             if (this.ghostMesh) {
                 this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
             }
-        }
-    }
-
-    placeItem() {
-        if (!this.isBuildingMode || !this.canPlace) return;
-
-        if (this.game.wood >= this.wallCost) {
-            this.game.addResource('tree', -this.wallCost);
-
-            const newWall = new Wall(this.scene, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
-            this.game.addShadowCaster(newWall.mesh);
-            
-            console.log("Wall placed.");
-            // Exit build mode after placing, or let user place more? For now, exit.
-            // this.exitBuildMode(); 
-        } else {
-            console.log("Not enough wood!");
-            this.exitBuildMode();
         }
     }
 }
