@@ -31,13 +31,12 @@ export class BabylonGame {
         this.cameraKeys = { z: false, s: false, q: false, d: false };
         this.freeCameraSpeed = 3; // units per second
         this.freeCameraTarget = new BABYLON.Vector3(0, 0, 0);
-        this.latestDragMousePosition = { x: 0, y: 0 };
 
         // Inventory
         this.wood = 10; // Start with some wood
         this.stone = 0;
 
-        this.ui = new UI();
+        this.ui = new UI(this);
         this.ui.updateWood(this.wood);
         this.ui.updateStone(this.stone);
     }
@@ -55,6 +54,7 @@ export class BabylonGame {
         canvas.style.width = "100%";
         canvas.style.height = "100%";
         canvas.id = "gameCanvas";
+        canvas.tabIndex = 1; // Make canvas focusable
         document.body.appendChild(canvas);
         return canvas;
     }
@@ -112,7 +112,7 @@ export class BabylonGame {
 
         // Connect UI to managers
         this.ui.onBuildMenuToggled = (isOpen) => this.buildingManager.toggleBuildMode(isOpen);
-        this.ui.onDragStart = (itemType) => this.buildingManager.startPlacement(itemType);
+        this.ui.onItemSelected = (itemType) => this.buildingManager.selectItemToPlace(itemType);
 
         // Connect managers to game cycles
         this.cycleManager.onNightStart = (day) => this.enemyManager.startWave(day);
@@ -157,25 +157,34 @@ export class BabylonGame {
 
         this.camera.setTarget(this.player.hitbox.position);
 
-        // Setup canvas drop zone
-        this.canvas.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            this.latestDragMousePosition = { x: event.clientX, y: event.clientY };
-        });
-
-        this.canvas.addEventListener('drop', (event) => {
-            event.preventDefault();
-            const itemType = event.dataTransfer.getData('text/plain');
-            this.buildingManager.confirmPlacement(itemType);
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case BABYLON.PointerEventTypes.POINTERDOWN:
+                    if (this.buildingManager.isPlacing) {
+                        this.buildingManager.confirmPlacement();
+                    }
+                    break;
+                case BABYLON.PointerEventTypes.POINTERMOVE:
+                    if (this.buildingManager.isPlacing) {
+                        this.buildingManager.updateGhostMeshPosition();
+                    }
+                    break;
+            }
         });
     }
 
     setupCameraControls() {
-        window.addEventListener('keydown', (e) => {
+        this.canvas.addEventListener('keydown', (e) => {
+            if (this.buildingManager.isPlacing) {
+                this.buildingManager.handlePlacementKeyPress(e);
+                return; // Prevent other keydowns while placing
+            }
+
             if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
                 this.cameraKeys[e.key] = true;
             }
         });
+
         window.addEventListener('keyup', (e) => {
             if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
                 this.cameraKeys[e.key] = false;
@@ -314,10 +323,6 @@ export class BabylonGame {
             return;
         }
 
-        document.addEventListener('dragend', (event) => {
-            this.buildingManager.cancelPlacement();
-        });
-
         this.engine.runRenderLoop(() => {
             const delta = this.engine.getDeltaTime() / 1000;
 
@@ -344,9 +349,6 @@ export class BabylonGame {
             
             if (this.resourceManager) {
                 this.resourceManager.update();
-            }
-            if (this.buildingManager) {
-                this.buildingManager.update();
             }
 
             this.scene.render();

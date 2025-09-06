@@ -1,5 +1,7 @@
 export class UI {
-    constructor() {
+    constructor(game) {
+        this.game = game;
+
         // Resource elements
         this.woodSpan = document.querySelector('#wood span');
         this.stoneSpan = document.querySelector('#stone span');
@@ -31,7 +33,7 @@ export class UI {
 
         // Callbacks
         this.onBuildMenuToggled = null; // To notify game about menu state
-        this.onDragStart = null;
+        this.onItemSelected = null; // Changed from onDragStart
 
         // Initial state
         this.updateWood(0);
@@ -47,11 +49,11 @@ export class UI {
         this.makeDraggable(this.buildMenu, this.buildMenu.querySelector('.panel-header'));
 
         this.craftingItems.forEach(item => {
-            item.addEventListener('dragstart', (event) => {
+            item.addEventListener('click', (event) => {
+                this.game.canvas.focus();
                 const itemType = event.currentTarget.dataset.item;
-                event.dataTransfer.setData('text/plain', itemType);
-                if (this.onDragStart) {
-                    this.onDragStart(itemType);
+                if (this.onItemSelected) {
+                    this.onItemSelected(itemType);
                 }
             });
         });

@@ -18,18 +18,6 @@ export class InputHandler {
         if (event.key === 'e') { // Contextual Action
             this.game.doContextualAction();
         }
-
-        if (event.key === 'r') { // Rotate placement
-            if (this.game.placementMode) {
-                this.game.rotatePlacementGhost();
-            }
-        }
-
-        if (event.key === 'Escape') { // Cancel placement
-            if (this.game.placementMode) {
-                this.game.cancelPlacement();
-            }
-        }
     }
 
     onKeyUp(event) {

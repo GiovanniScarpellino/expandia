@@ -20,8 +20,10 @@ export class BuildingManager {
         this.itemCosts = {
             wall: { wood: 5, stone: 0 }
         };
+    }
 
-        window.addEventListener('keydown', this.handleKeyPress);
+    dispose() {
+        // No persistent listeners to clean up anymore
     }
 
     toggleBuildMode(isOpen) {
@@ -29,14 +31,15 @@ export class BuildingManager {
         this.game.setPaused(isOpen);
 
         if (isOpen) {
-            this.game.freeCameraTarget.copyFrom(this.game.player.mesh.position);
+            this.game.canvas.focus();
+            this.game.freeCameraTarget.copyFrom(this.game.player.hitbox.position);
         } else {
             this.cancelPlacement();
         }
     }
 
-    startPlacement(itemType) {
-        if (!this.isBuildingMode) return;
+    selectItemToPlace(itemType) {
+        if (!this.isBuildingMode || this.isPlacing) return;
 
         const cost = this.itemCosts[itemType];
         if (this.game.wood < cost.wood || this.game.stone < cost.stone) {
@@ -47,6 +50,7 @@ export class BuildingManager {
         this.isPlacing = true;
         this.currentItemType = itemType;
         this.createGhostMesh(itemType);
+        this.game.ui.buildMenu.style.display = 'none'; // Just hide the menu
     }
 
     cancelPlacement() {
@@ -54,40 +58,39 @@ export class BuildingManager {
         this.isPlacing = false;
         this.currentItemType = null;
         this.destroyGhostMesh();
+        if (this.isBuildingMode) {
+            this.game.ui.buildMenu.style.display = 'block'; // Show menu again
+        }
     }
 
-    confirmPlacement(itemType) {
-        if (!this.isPlacing || !this.canPlace || this.currentItemType !== itemType) {
-            this.cancelPlacement();
+    confirmPlacement() {
+        if (!this.isPlacing || !this.canPlace) {
             return;
         }
 
-        const cost = this.itemCosts[itemType];
+        const cost = this.itemCosts[this.currentItemType];
         if (this.game.wood >= cost.wood && this.game.stone >= cost.stone) {
             this.game.addResource('tree', -cost.wood);
             this.game.addResource('rock', -cost.stone);
 
-            if (itemType === 'wall') {
+            if (this.currentItemType === 'wall') {
                 const newWall = new Wall(this.scene, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
                 this.game.addShadowCaster(newWall.mesh);
             }
             
-            console.log(`${itemType} placed.`);
+            console.log(`${this.currentItemType} placed.`);
         } else {
             console.log("Not enough resources!");
         }
         
-        // Keep placing the same item if resources are available
-        const newCost = this.itemCosts[this.currentItemType];
-        if (this.game.wood < newCost.wood || this.game.stone < newCost.stone) {
-            this.cancelPlacement();
-        }
+        this.cancelPlacement(); // End placement after one build
     }
 
-    handleKeyPress = (e) => {
-        if (!this.isPlacing) return;
+    // This is now called from BabylonGame's central key listener
+    handlePlacementKeyPress(e) {
         if (e.key === 'r' || e.key === 'R') {
             this.placementRotation += Math.PI / 2;
+            this.updateGhostMeshPosition(); // Update ghost immediately
             e.preventDefault();
         }
         if (e.key === 'Escape') {
@@ -102,13 +105,13 @@ export class BuildingManager {
         if (itemType === 'wall') {
             this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
         }
-        // Add other item types here
         
         if (this.ghostMesh) {
             const ghostMat = new BABYLON.StandardMaterial("ghostMat", this.scene);
             ghostMat.alpha = 0.5;
             this.ghostMesh.material = ghostMat;
             this.ghostMesh.isPickable = false;
+            this.updateGhostMeshPosition(); // Initial position update
         }
     }
 
@@ -119,19 +122,16 @@ export class BuildingManager {
         }
     }
 
-    update() {
+    updateGhostMeshPosition() {
         if (!this.isPlacing || !this.ghostMesh) return;
 
-        const mouseX = this.game.latestDragMousePosition.x;
-        const mouseY = this.game.latestDragMousePosition.y;
-        const pickInfo = this.scene.pick(mouseX, mouseY);
+        const pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
 
         if (pickInfo.hit) {
             const pickPoint = pickInfo.pickedPoint;
             const tileSize = this.game.world.tileSize;
             const halfTile = tileSize / 2;
 
-            // Snap to the center of the nearest edge
             const snappedX = Math.round(pickPoint.x / halfTile) * halfTile;
             const snappedZ = Math.round(pickPoint.z / halfTile) * halfTile;
             const snappedPosition = new BABYLON.Vector3(snappedX, 0.5, snappedZ);
@@ -139,7 +139,7 @@ export class BuildingManager {
             this.ghostMesh.position = snappedPosition;
             this.ghostMesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, this.placementRotation, 0);
 
-            // Check for validity
+            // Validity Check (same as before)
             const x_is_edge = (Math.abs(Math.round(snappedX / halfTile)) % 2) !== 0;
             const z_is_edge = (Math.abs(Math.round(snappedZ / halfTile)) % 2) !== 0;
 
