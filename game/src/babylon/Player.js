@@ -1,13 +1,25 @@
-
 import * as BABYLON from '@babylonjs/core';
 
 export class Player {
     constructor(game, mesh, scene, animationGroups) {
         this.game = game;
         this.scene = scene;
+
+        // The visual mesh that the player sees
         this.mesh = mesh;
-        this.mesh.position = new BABYLON.Vector3(0, 0, 0); // Set Y to 0 to stand on the ground
+        this.mesh.position = new BABYLON.Vector3(0, -0.5, 0); // Centered within the hitbox
         this.mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+        this.mesh.checkCollisions = false; // The visual mesh itself doesn't collide
+
+        // The invisible collision hitbox
+        this.hitbox = BABYLON.MeshBuilder.CreateBox("playerHitbox", { width: 0.5, height: 1, depth: 0.5 }, scene);
+        this.hitbox.position = new BABYLON.Vector3(0, 0.5, 0); // Positioned at ground level
+        this.hitbox.checkCollisions = true;
+        this.hitbox.ellipsoid = new BABYLON.Vector3(0.25, 0.5, 0.25); // Ellipsoid matches the hitbox dimensions
+        this.hitbox.isVisible = false; // Make it true to debug
+
+        // Parent the visual mesh to the hitbox, so it follows automatically
+        this.mesh.parent = this.hitbox;
 
         this.walkSpeed = 0.03;
         this.currentSpeed = 0;
@@ -138,19 +150,31 @@ export class Player {
         if (direction.lengthSquared() > 0) {
             direction.normalize();
             
-            this.mesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z), 0);
+            this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z) + Math.PI, 0); // Add PI for 180-degree flip
 
             const moveVector = direction.scale(this.currentSpeed);
-            const nextPosition = this.mesh.position.add(moveVector);
+            const previousPosition = this.hitbox.position.clone();
 
-            if (this.game.world.canMoveTo(nextPosition)) {
-                this.mesh.position = nextPosition;
+            // Move on X axis
+            this.hitbox.moveWithCollisions(new BABYLON.Vector3(moveVector.x, 0, 0));
+            if (!this.game.world.canMoveTo(this.hitbox.position)) {
+                this.hitbox.position.x = previousPosition.x;
+            }
+
+            // Move on Z axis
+            this.hitbox.moveWithCollisions(new BABYLON.Vector3(0, 0, moveVector.z));
+            if (!this.game.world.canMoveTo(this.hitbox.position)) {
+                this.hitbox.position.z = previousPosition.z;
             }
         }
+
+        // Apply a constant downward force to keep the player grounded
+        const gravity = new BABYLON.Vector3(0, -0.1, 0);
+        this.hitbox.moveWithCollisions(gravity);
     }
 
     dispose() {
         this.inputHandler.dispose();
-        this.mesh.dispose();
+        this.hitbox.dispose(); // This will also dispose the child mesh
     }
 }

@@ -1,4 +1,3 @@
-
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { Player } from './babylon/Player.js';
@@ -45,6 +44,7 @@ export class BabylonGame {
 
     async initialize() {
         this.scene = new BABYLON.Scene(this.engine);
+        this.scene.collisionsEnabled = true;
         await this.loadModels();
         this.createScene();
         this.setupCameraControls();
@@ -155,7 +155,7 @@ export class BabylonGame {
         const animationGroups = this.models.player.animationGroups;
         this.player = new Player(this, playerMesh, this.scene, animationGroups);
 
-        this.camera.setTarget(this.player.mesh.position);
+        this.camera.setTarget(this.player.hitbox.position);
 
         // Setup canvas drop zone
         this.canvas.addEventListener('dragover', (event) => {
@@ -218,7 +218,7 @@ export class BabylonGame {
         this.isPaused = isPaused;
         this.cycleManager.paused = isPaused;
         if (isPaused) {
-            this.camera.setTarget(this.player.mesh.position.clone());
+            this.camera.setTarget(this.player.hitbox.position.clone());
         }
     }
 
@@ -241,7 +241,7 @@ export class BabylonGame {
         let minDistance = Infinity;
         this.resourceManager.resources.forEach(resource => {
             if (!resource.mesh.isEnabled()) return;
-            const distance = BABYLON.Vector3.Distance(this.player.mesh.position, resource.mesh.position);
+            const distance = BABYLON.Vector3.Distance(this.player.hitbox.position, resource.mesh.position);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestResource = resource;
@@ -256,7 +256,7 @@ export class BabylonGame {
         for (const key in this.world.tiles) {
             const tile = this.world.tiles[key];
             if (!tile.metadata.unlocked) {
-                const distance = BABYLON.Vector3.Distance(this.player.mesh.position, tile.position);
+                const distance = BABYLON.Vector3.Distance(this.player.hitbox.position, tile.position);
                 if (distance < minDistance) {
                     minDistance = distance;
                     tileToUnlock = tile;
@@ -267,7 +267,7 @@ export class BabylonGame {
     }
 
     doContextualAction() {
-        const resourceToHarvest = this.getClosestResource(0.5);
+        const resourceToHarvest = this.getClosestResource(1.0);
         if (resourceToHarvest) {
             this.player.playerHarvest(() => {
                 const resourceType = this.resourceManager.harvestResource(resourceToHarvest);
@@ -294,7 +294,7 @@ export class BabylonGame {
     updateInteractionHighlights() {
         this.highlightLayer.removeAllMeshes();
 
-        const resourceToHarvest = this.getClosestResource(0.5);
+        const resourceToHarvest = this.getClosestResource(1.0);
         if (resourceToHarvest) {
             resourceToHarvest.mesh.getChildMeshes().forEach(m => {
                 this.highlightLayer.addMesh(m, BABYLON.Color3.Green());
@@ -327,8 +327,8 @@ export class BabylonGame {
                 this.updateFreeCamera(delta);
             } else {
                 if (this.player) {
-                    this.camera.position = this.player.mesh.position.add(this.cameraOffset);
-                    this.camera.setTarget(this.player.mesh.position);
+                    this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
+                    this.camera.setTarget(this.player.hitbox.position);
                 }
             }
 

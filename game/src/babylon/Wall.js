@@ -1,4 +1,3 @@
-
 import * as BABYLON from '@babylonjs/core';
 
 export class Wall {
@@ -9,6 +8,7 @@ export class Wall {
         this.mesh = BABYLON.MeshBuilder.CreateBox("wall", { width: 2, height: 1, depth: 0.2 }, scene);
         this.mesh.position = position;
         this.mesh.rotationQuaternion = rotation;
+        this.mesh.checkCollisions = true;
         
         const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
         wallMat.diffuseColor = BABYLON.Color3.FromHexString("#8B4513"); // SaddleBrown

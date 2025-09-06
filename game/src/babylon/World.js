@@ -71,6 +71,7 @@ export class World {
         tile.rotation.x = Math.PI / 2;
         tile.material = unlocked ? this.unlockedMaterial : this.lockedMaterial;
         tile.receiveShadows = true;
+        tile.checkCollisions = true;
 
         tile.metadata = { unlocked, x, z };
         this.tiles[key] = tile;
@@ -79,17 +80,6 @@ export class World {
         if (x % 3 === 0 && z % 3 === 0) {
             const lamppost = new Lamppost(this.scene, tilePosition);
             this.lampposts.push(lamppost);
-
-            // Special case for the first lamppost at (0,0)
-            if (x === 0 && z === 0) {
-                lamppost.turnOn();
-                setTimeout(() => {
-                    // Turn off only if the sun is up
-                    if (this.game.cycleManager && this.game.cycleManager.isDay) {
-                       lamppost.turnOff();
-                    }
-                }, 15000);
-            }
         }
 
         return { tile: tile, isNew: true };
