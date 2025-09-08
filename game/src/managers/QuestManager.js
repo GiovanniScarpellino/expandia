@@ -51,9 +51,6 @@ export class QuestManager {
             } else if (type === 'unlock_tile') {
                 this.currentQuest.progress += 1;
                 questAdvanced = true;
-            } else if (type === 'defeat_enemy') {
-                this.currentQuest.progress += 1;
-                questAdvanced = true;
             }
         }
 

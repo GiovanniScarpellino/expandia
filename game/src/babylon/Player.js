@@ -37,7 +37,18 @@ export class Player {
             this.animations[group.name] = group;
         });
         this.playAnimation('idle');
-        this.isHarvesting = false; // New state variable
+        
+        // State & Stats
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.isHarvesting = false;
+
+        // Link takeDamage to hitbox metadata
+        this.hitbox.metadata = {
+            type: 'player',
+            instance: this,
+            takeDamage: (amount) => this.takeDamage(amount)
+        };
     }
 
     playAnimation(name, loop = true, speed = 1.0) {
@@ -58,24 +69,28 @@ export class Player {
 
     setupInput() {
         const keydown = (e) => {
-            // Prevent actions if player is busy or build menu is open
-            if (this.isHarvesting || this.game.buildingManager.isBuildingMode) {
-                // Player input is disabled during build mode
+            // Allow exiting build mode anytime
+            if (e.key === 'b' && this.game.buildingManager.isBuildingMode) {
+                this.game.ui.toggleBuildMenu(false);
                 return;
+            }
+
+            if (this.isHarvesting || this.game.buildingManager.isBuildingMode) {
+                return; // Player input is disabled during these actions
             }
 
             if (e.key in this.keys) this.keys[e.key] = true;
             
             switch (e.key) {
                 case 'e':
-                    if (this.game.buildingManager.isBuildingMode) {
-                        this.game.buildingManager.placeWall();
-                    } else {
-                        this.game.doContextualAction();
-                    }
+                    this.game.doContextualAction();
                     break;
                 case 'b':
                     this.game.ui.toggleBuildMenu(true);
+                    break;
+                case ' ': // Spacebar
+                    e.preventDefault();
+                    this.attack();
                     break;
             }
         };
@@ -95,9 +110,24 @@ export class Player {
         };
     }
 
+    attack() {
+        // Attack logic removed as enemies are removed.
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        this.game.ui.updateHealth(this.health);
+
+        if (this.health <= 0) {
+            this.health = 0;
+            console.error("GAME OVER - Le joueur a été vaincu !");
+            // Here you would trigger a game over state
+        }
+    }
+
     playerHarvest(onHarvestComplete) {
         if (this.isHarvesting) return;
-        this.isHarvesting = true; // Set harvesting state to true
+        this.isHarvesting = true;
         const animation = this.playAnimation('pick-up', false, 1.0);
         if (animation) {
             animation.onAnimationEndObservable.addOnce(() => {
@@ -117,7 +147,7 @@ export class Player {
     update(delta) {
         if (this.isHarvesting || this.game.buildingManager.isBuildingMode) {
             this.currentSpeed = 0;
-            this.playAnimation('idle');
+            if (!this.isHarvesting) this.playAnimation('idle');
             return; 
         }
 
@@ -145,31 +175,28 @@ export class Player {
         if (direction.lengthSquared() > 0) {
             direction.normalize();
             
-            this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z) + Math.PI, 0); // Add PI for 180-degree flip
+            this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z) + Math.PI, 0);
 
             const moveVector = direction.scale(this.currentSpeed);
             const previousPosition = this.hitbox.position.clone();
 
-            // Move on X axis
             this.hitbox.moveWithCollisions(new BABYLON.Vector3(moveVector.x, 0, 0));
             if (!this.game.world.canMoveTo(this.hitbox.position)) {
                 this.hitbox.position.x = previousPosition.x;
             }
 
-            // Move on Z axis
             this.hitbox.moveWithCollisions(new BABYLON.Vector3(0, 0, moveVector.z));
             if (!this.game.world.canMoveTo(this.hitbox.position)) {
                 this.hitbox.position.z = previousPosition.z;
             }
         }
 
-        // Apply a constant downward force to keep the player grounded
         const gravity = new BABYLON.Vector3(0, -0.1, 0);
         this.hitbox.moveWithCollisions(gravity);
     }
 
     dispose() {
         this.inputHandler.dispose();
-        this.hitbox.dispose(); // This will also dispose the child mesh
+        this.hitbox.dispose();
     }
 }

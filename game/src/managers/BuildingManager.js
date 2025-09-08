@@ -11,6 +11,7 @@ export class BuildingManager {
         this.isPlacing = false;
         this.currentItemType = null;
         this.canPlace = false;
+        this.buildings = []; // Keep track of all buildings
 
         // Ghost Mesh
         this.ghostMesh = null;
@@ -74,8 +75,9 @@ export class BuildingManager {
             this.game.addResource('rock', -cost.stone);
 
             if (this.currentItemType === 'wall') {
-                const newWall = new Wall(this.scene, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
+                const newWall = new Wall(this, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
                 this.game.addShadowCaster(newWall.mesh);
+                this.buildings.push(newWall);
             }
             
             console.log(`${this.currentItemType} placed.`);
@@ -84,6 +86,13 @@ export class BuildingManager {
         }
         
         this.cancelPlacement(); // End placement after one build
+    }
+
+    removeBuilding(buildingToRemove) {
+        const index = this.buildings.indexOf(buildingToRemove);
+        if (index > -1) {
+            this.buildings.splice(index, 1);
+        }
     }
 
     // This is now called from BabylonGame's central key listener

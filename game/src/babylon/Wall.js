@@ -1,16 +1,17 @@
 import * as BABYLON from '@babylonjs/core';
 
 export class Wall {
-    constructor(scene, position, rotation) {
-        this.scene = scene;
+    constructor(buildingManager, position, rotation) {
+        this.buildingManager = buildingManager;
+        this.scene = buildingManager.scene;
 
         // Create the wall mesh
-        this.mesh = BABYLON.MeshBuilder.CreateBox("wall", { width: 2, height: 1, depth: 0.2 }, scene);
+        this.mesh = BABYLON.MeshBuilder.CreateBox("wall", { width: 2, height: 1, depth: 0.2 }, this.scene);
         this.mesh.position = position;
         this.mesh.rotationQuaternion = rotation;
         this.mesh.checkCollisions = true;
         
-        const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
+        const wallMat = new BABYLON.StandardMaterial("wallMat", this.scene);
         wallMat.diffuseColor = BABYLON.Color3.FromHexString("#8B4513"); // SaddleBrown
         this.mesh.material = wallMat;
 
@@ -22,7 +23,8 @@ export class Wall {
 
         this.mesh.metadata = { 
             type: 'wall',
-            instance: this
+            instance: this,
+            takeDamage: (amount) => this.takeDamage(amount)
         };
     }
 
@@ -34,6 +36,7 @@ export class Wall {
     }
 
     dispose() {
+        this.buildingManager.removeBuilding(this);
         this.mesh.dispose();
     }
 }

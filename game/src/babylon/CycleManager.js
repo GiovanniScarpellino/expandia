@@ -45,6 +45,12 @@ export class CycleManager {
         this.lampposts = lampposts;
     }
 
+    startNight() {
+        if (this.isDay) {
+            this.timeOfDay = 0;
+        }
+    }
+
     update(delta) {
         if (this.paused) {
             // If paused, we still need to update the UI, but not advance time

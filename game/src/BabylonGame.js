@@ -3,7 +3,6 @@ import '@babylonjs/loaders/glTF';
 import { Player } from './babylon/Player.js';
 import { World } from './babylon/World.js';
 import { ResourceManager } from './babylon/ResourceManager.js';
-import { EnemyManager } from './managers/EnemyManager.js';
 import { BuildingManager } from './managers/BuildingManager.js';
 import { UI } from './UI.js';
 import { CycleManager } from './babylon/CycleManager.js';
@@ -16,7 +15,6 @@ export class BabylonGame {
         this.player = null;
         this.world = null;
         this.resourceManager = null;
-        this.enemyManager = null;
         this.buildingManager = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 10, -8); // Increased offset for better view
@@ -39,6 +37,15 @@ export class BabylonGame {
         this.ui = new UI(this);
         this.ui.updateWood(this.wood);
         this.ui.updateStone(this.stone);
+
+        // Define handlers in constructor to preserve `this` context
+        this.handleNightStart = (day) => {
+            console.log("BabylonGame: handleNightStart triggered for day", day);
+        };
+
+        this.handleDayStart = () => {
+            
+        };
     }
 
     async initialize() {
@@ -64,7 +71,8 @@ export class BabylonGame {
             player: "character-a.glb",
             tree: "tree.glb",
             rock: "rock-small.glb",
-            base: "blade.glb"
+            base: "blade.glb",
+            spawner: "blade.glb",
         };
 
         for (const key in modelUrls) {
@@ -105,7 +113,6 @@ export class BabylonGame {
 
         this.world = new World(this, this.scene);
         this.resourceManager = new ResourceManager(this, this.scene);
-        this.enemyManager = new EnemyManager(this);
         this.buildingManager = new BuildingManager(this);
         
         this.world.init();
@@ -115,8 +122,8 @@ export class BabylonGame {
         this.ui.onItemSelected = (itemType) => this.buildingManager.selectItemToPlace(itemType);
 
         // Connect managers to game cycles
-        this.cycleManager.onNightStart = (day) => this.enemyManager.startWave(day);
-        this.cycleManager.onDayStart = () => this.enemyManager.despawnAll();
+        this.cycleManager.onNightStart = this.handleNightStart;
+        this.cycleManager.onDayStart = this.handleDayStart;
         this.cycleManager.setLampposts(this.world.lampposts);
 
         // Create initial resources
@@ -341,9 +348,6 @@ export class BabylonGame {
                 this.cycleManager.update(delta);
                 if (this.player) {
                     this.player.update(delta);
-                }
-                if (this.enemyManager) {
-                    this.enemyManager.update(delta);
                 }
             }
             

@@ -25,6 +25,9 @@ export class UI {
         this.buildMenu = document.getElementById('build-menu');
         this.craftingItems = document.querySelectorAll('.crafting-item');
 
+        // Debug
+        this.startNightButton = document.getElementById('start-night-button');
+
         // Save indicator
         this.saveIndicatorDiv = document.createElement('div');
         this.saveIndicatorDiv.id = 'save-indicator';
@@ -47,6 +50,10 @@ export class UI {
         this.buildMenuButton.addEventListener('click', () => this.toggleBuildMenu());
         this.closeBuildMenuButton.addEventListener('click', () => this.toggleBuildMenu(false));
         this.makeDraggable(this.buildMenu, this.buildMenu.querySelector('.panel-header'));
+
+        this.startNightButton.addEventListener('click', () => {
+            this.game.cycleManager.startNight();
+        });
 
         this.craftingItems.forEach(item => {
             item.addEventListener('click', (event) => {

@@ -59,6 +59,52 @@ export class World {
         return false;
     }
 
+    getSpawnPoints() {
+        const spawnPoints = [];
+        const checkedNeighbors = new Set();
+
+        for (const key in this.tiles) {
+            const tile = this.tiles[key];
+            if (tile.metadata.unlocked) {
+                const { x, z } = tile.metadata;
+                
+                // Check neighbors
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        if (i === 0 && j === 0) continue;
+
+                        const neighborKey = this.getTileKey(x + i, z + j);
+                        if (checkedNeighbors.has(neighborKey)) continue;
+                        
+                        const neighborTile = this.tiles[neighborKey];
+                        // A spawn point is a non-unlocked tile adjacent to an unlocked one
+                        if (!neighborTile || !neighborTile.metadata.unlocked) {
+                            // We add the position of the *unlocked* tile as a starting point
+                            // The NPC will spawn just outside it.
+                            const spawnPosition = tile.position.clone();
+                            // Add a small offset to spawn outside the unlocked tile
+                            spawnPosition.x += i * this.tileSize * 0.6;
+                            spawnPosition.z += j * this.tileSize * 0.6;
+                            spawnPoints.push(spawnPosition);
+                        }
+                        checkedNeighbors.add(neighborKey);
+                    }
+                }
+            }
+        }
+        // Return unique positions
+        const uniquePositions = [];
+        const positionSet = new Set();
+        for(const pos of spawnPoints) {
+            const key = `${pos.x.toFixed(1)},${pos.z.toFixed(1)}`;
+            if (!positionSet.has(key)) {
+                uniquePositions.push(pos);
+                positionSet.add(key);
+            }
+        }
+        return uniquePositions;
+    }
+
     createTile(x, z, unlocked = false) {
         const key = this.getTileKey(x, z);
         if (this.tiles[key]) {
