@@ -6,6 +6,7 @@ import { ResourceManager } from './babylon/ResourceManager.js';
 import { BuildingManager } from './managers/BuildingManager.js';
 import { UI } from './UI.js';
 import { CycleManager } from './babylon/CycleManager.js';
+import { NPC } from './babylon/NPC.js';
 
 export class BabylonGame {
     constructor() {
@@ -32,7 +33,11 @@ export class BabylonGame {
 
         // Inventory
         this.wood = 10; // Start with some wood
-        this.stone = 0;
+        this.stone = 10; // Start with some stone for NPC
+
+        // NPCs
+        this.npcs = [];
+        this.npcCost = { wood: 10, stone: 10 };
 
         this.ui = new UI(this);
         this.ui.updateWood(this.wood);
@@ -46,6 +51,9 @@ export class BabylonGame {
         this.handleDayStart = () => {
             
         };
+
+        // Ensure 'this' context for methods passed as callbacks
+        this.doContextualAction = this.doContextualAction.bind(this);
     }
 
     async initialize() {
@@ -69,6 +77,7 @@ export class BabylonGame {
     async loadModels() {
         const modelUrls = {
             player: "character-a.glb",
+            npc: "character-l.glb",
             tree: "tree.glb",
             rock: "rock-small.glb",
             base: "blade.glb",
@@ -292,6 +301,23 @@ export class BabylonGame {
     }
 
     doContextualAction() {
+        // NPC Creation at base
+        if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
+            if (this.wood >= this.npcCost.wood && this.stone >= this.npcCost.stone) {
+                this.wood -= this.npcCost.wood;
+                this.stone -= this.npcCost.stone;
+                this.ui.updateWood(this.wood);
+                this.ui.updateStone(this.stone);
+
+                const npc = new NPC(this, this.base.position.clone(), this.models.npc.animationGroups);
+                this.npcs.push(npc);
+                this.ui.updateNpcCount(this.npcs.length);
+
+                console.log("Created a new NPC!");
+                return; // Action taken
+            }
+        }
+
         const resourceToHarvest = this.getClosestResource(1.0);
         if (resourceToHarvest) {
             this.player.playerHarvest(() => {
@@ -331,6 +357,15 @@ export class BabylonGame {
         if (tileToUnlock) {
             this.highlightLayer.addMesh(tileToUnlock, BABYLON.Color3.Yellow());
         }
+
+        // Highlight base for NPC creation
+        if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
+            if (this.wood >= this.npcCost.wood && this.stone >= this.npcCost.stone) {
+                this.base.getChildMeshes().forEach(m => {
+                    this.highlightLayer.addMesh(m, BABYLON.Color3.Yellow());
+                });
+            }
+        }
     }
 
     start() {
@@ -358,6 +393,7 @@ export class BabylonGame {
                 if (this.player) {
                     this.player.update(delta);
                 }
+                this.npcs.forEach(npc => npc.update(delta));
             }
             
             if (this.resourceManager) {

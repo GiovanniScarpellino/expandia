@@ -22,15 +22,14 @@ export class ResourceManager {
         newInstance.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
         newInstance.setEnabled(true);
 
-        this.game.mainShadowGenerator.addShadowCaster(newInstance, true);
-
         const resource = {
             mesh: newInstance,
-            type: type,
+            type: type
         };
 
+        resource.mesh.metadata = { type: type, isTargeted: false };
         this.resources.push(resource);
-        return resource;
+        this.game.addShadowCaster(resource.mesh);
     }
 
     harvestResource(resource) {

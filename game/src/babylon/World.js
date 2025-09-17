@@ -23,7 +23,7 @@ export class World {
     init() {
         this.createTile(0, 0, true);
         this.createTile(0, 1, false);
-        this.createTile(0, -1, false);
+        this.createTile(0, -1, true); // Unlock the tile under the base
         this.createTile(1, 0, false);
         this.createTile(-1, 0, false);
     }
