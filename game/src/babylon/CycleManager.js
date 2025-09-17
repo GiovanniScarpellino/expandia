@@ -45,6 +45,14 @@ export class CycleManager {
         this.lampposts = lampposts;
     }
 
+    addLamppost(lamppost) {
+        this.lampposts.push(lamppost);
+        // If it's night, turn it on immediately
+        if (!this.isDay) {
+            lamppost.turnOn();
+        }
+    }
+
     startNight() {
         if (this.isDay) {
             this.timeOfDay = 0;

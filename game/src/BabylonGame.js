@@ -111,6 +111,15 @@ export class BabylonGame {
         this.mainShadowGenerator.blurKernel = 64;
         this.mainShadowGenerator.darkness = 0.5;
 
+        // Create a large ground plane for visual effect
+        const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 100, height: 100}, this.scene);
+        const groundMaterial = new BABYLON.StandardMaterial("groundMat", this.scene);
+        groundMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3); // Brownish color
+        groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        ground.material = groundMaterial;
+        ground.receiveShadows = true;
+        ground.position.y = -0.05; // Position it slightly below the tiles
+
         this.world = new World(this, this.scene);
         this.resourceManager = new ResourceManager(this, this.scene);
         this.buildingManager = new BuildingManager(this);

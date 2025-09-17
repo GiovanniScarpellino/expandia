@@ -122,8 +122,8 @@ export class World {
         tile.metadata = { unlocked, x, z };
         this.tiles[key] = tile;
 
-        // Create lamppost on tiles where x and z are multiples of 3
-        if (x % 3 === 0 && z % 3 === 0) {
+        // Create lamppost only on the center tile
+        if (x === 0 && z === 0) {
             const lamppost = new Lamppost(this.scene, tilePosition);
             this.lampposts.push(lamppost);
         }
