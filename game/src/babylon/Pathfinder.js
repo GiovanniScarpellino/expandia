@@ -23,6 +23,7 @@ class PriorityQueue {
 export class Pathfinder {
     /**
      * Finds a path from start to end using A* algorithm on the world grid.
+     * The path will lead to the end tile if it's unlocked, or to an adjacent unlocked tile if it's locked.
      * @param {World} world The world instance containing the tiles.
      * @param {BABYLON.Vector3} startPos The starting position vector.
      * @param {BABYLON.Vector3} endPos The ending position vector.
@@ -38,8 +39,33 @@ export class Pathfinder {
         const startNode = world.tiles[startKey];
         const endNode = world.tiles[endKey];
 
-        if (!startNode || !endNode || !startNode.metadata.unlocked || !endNode.metadata.unlocked) {
-            console.warn("Pathfinder: Start or end tile is not valid or not unlocked.");
+        // The start node must always be valid and unlocked.
+        if (!startNode || !endNode || !startNode.metadata.unlocked) {
+            return [];
+        }
+
+        // Determine the goal(s) for the pathfinder
+        let goalKeys = [];
+        if (endNode.metadata.unlocked) {
+            // If the destination tile is unlocked, that's our only goal.
+            goalKeys.push(endKey);
+        } else {
+            // If the destination tile is locked, our goals are all of its unlocked neighbors.
+            const { x, z } = endNode.metadata;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (Math.abs(i) === Math.abs(j)) continue; // No diagonals
+                    const neighborKey = world.getTileKey(x + i, z + j);
+                    const neighborNode = world.tiles[neighborKey];
+                    if (neighborNode && neighborNode.metadata.unlocked) {
+                        goalKeys.push(neighborKey);
+                    }
+                }
+            }
+        }
+
+        if (goalKeys.length === 0) {
+            // No path possible if the destination is locked and has no unlocked neighbors.
             return [];
         }
 
@@ -52,8 +78,10 @@ export class Pathfinder {
         while (!frontier.isEmpty()) {
             const currentKey = frontier.dequeue();
 
-            if (currentKey === endKey) {
-                return this.reconstructPath(cameFrom, currentKey, world);
+            // If we've reached one of our goal tiles, we're done.
+            if (goalKeys.includes(currentKey)) {
+                const path = this.reconstructPath(cameFrom, currentKey, world);
+                return path;
             }
 
             const currentTile = world.tiles[currentKey];
@@ -68,8 +96,11 @@ export class Pathfinder {
                     const neighborKey = world.getTileKey(neighborX, neighborZ);
                     const neighborNode = world.tiles[neighborKey];
 
-                    if (neighborNode && neighborNode.metadata.unlocked) {
-                        const newCost = costSoFar[currentKey] + 1; // Cost is 1 per tile
+                    const edgeKey = [currentKey, neighborKey].sort().join('_');
+                    const isBlocked = world.blockedEdges && world.blockedEdges.has(edgeKey);
+
+                    if (neighborNode && neighborNode.metadata.unlocked && !isBlocked) {
+                        const newCost = costSoFar[currentKey] + 1;
 
                         if (!(neighborKey in costSoFar) || newCost < costSoFar[neighborKey]) {
                             costSoFar[neighborKey] = newCost;
@@ -86,7 +117,6 @@ export class Pathfinder {
     }
 
     static heuristic(a, b) {
-        // Manhattan distance on a grid
         return Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
     }
 

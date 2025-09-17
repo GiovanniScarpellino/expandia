@@ -80,6 +80,37 @@ export class BuildingManager {
                 const newWall = new Wall(this, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
                 this.game.addShadowCaster(newWall.mesh);
                 this.buildings.push(newWall);
+
+                // Block the pathfinding edge
+                const wallPosition = this.ghostMesh.position;
+                const halfTile = this.game.world.tileSize / 2;
+
+                const x_is_edge = (Math.abs(Math.round(wallPosition.x / halfTile)) % 2) !== 0;
+                const z_is_edge = (Math.abs(Math.round(wallPosition.z / halfTile)) % 2) !== 0;
+
+                let tile1_coords = null;
+                let tile2_coords = null;
+
+                if (x_is_edge && !z_is_edge) { // Vertical wall
+                    tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x - 0.1, 0, wallPosition.z));
+                    tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x + 0.1, 0, wallPosition.z));
+                } else if (!x_is_edge && z_is_edge) { // Horizontal wall
+                    tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x, 0, wallPosition.z - 0.1));
+                    tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x, 0, wallPosition.z + 0.1));
+                }
+
+                if (tile1_coords && tile2_coords) {
+                    const key1 = this.game.world.getTileKey(tile1_coords.x, tile1_coords.z);
+                    const key2 = this.game.world.getTileKey(tile2_coords.x, tile2_coords.z);
+
+                    const edgeKey = [key1, key2].sort().join('_');
+                    
+                    if (!this.game.world.blockedEdges) {
+                        this.game.world.blockedEdges = new Set();
+                    }
+                    this.game.world.blockedEdges.add(edgeKey);
+                }
+
             } else if (this.currentItemType === 'lamppost') {
                 const groundPosition = this.ghostMesh.position.clone();
                 groundPosition.y = 0; // The lamppost constructor expects a ground-level position

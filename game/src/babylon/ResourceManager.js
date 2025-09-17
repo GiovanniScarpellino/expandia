@@ -48,8 +48,10 @@ export class ResourceManager {
         for (let i = this.respawnQueue.length - 1; i >= 0; i--) {
             const item = this.respawnQueue[i];
             if (now >= item.respawnAt) {
-                item.resource.mesh.setEnabled(true);
-                this.resources.push(item.resource);
+                const respawnedResource = item.resource;
+                respawnedResource.mesh.setEnabled(true);
+                respawnedResource.mesh.metadata.isTargeted = false; // Reset the targeted flag
+                this.resources.push(respawnedResource);
                 this.respawnQueue.splice(i, 1);
             }
         }
