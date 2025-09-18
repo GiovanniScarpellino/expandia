@@ -1,14 +1,20 @@
 import * as BABYLON from '@babylonjs/core';
 import { Pathfinder } from './Pathfinder.js';
+import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class NPC {
-    constructor(game, position) {
+    constructor(game, position, specialization) {
         this.game = game;
         this.scene = game.scene;
-        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_BASE
+        this.specialization = specialization;
+        this.resourceMap = {
+            'LUMBERJACK': 'tree',
+            'MINER': 'rock'
+        };
+
+        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING
         this.path = [];
         this.targetResource = null;
-        this.cargo = null; // What the NPC is carrying
 
         // Config
         this.speed = 1.5; // units per second
@@ -30,6 +36,10 @@ export class NPC {
         this.hitbox.ellipsoid = new BABYLON.Vector3(0.25, 0.5, 0.25);
         this.hitbox.isVisible = false; // Set to true to debug
         this.lastPosition = this.hitbox.position.clone();
+
+        // Collision groups
+        this.hitbox.collisionGroup = COLLISION_GROUPS.NPC;
+        this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN | COLLISION_GROUPS.WALL;
 
         // Create visual mesh
         this.mesh = this.game.models.npc.mesh.clone(`npcMesh-${Math.random()}`);
@@ -92,9 +102,6 @@ export class NPC {
                 case 'GATHERING':
                     this.handleGatheringState(delta);
                     break;
-                case 'MOVING_TO_BASE':
-                    this.handleMoveState(delta, 'IDLE');
-                    break;
             }
         }
         this.hitbox.moveWithCollisions(new BABYLON.Vector3(0, -0.1, 0));
@@ -154,10 +161,6 @@ export class NPC {
         }
 
         if (this.path.length === 0) {
-            if (nextState === 'IDLE' && this.cargo) {
-                this.game.addResource(this.cargo, 1);
-                this.cargo = null;
-            }
             this.state = nextState;
         }
     }
@@ -184,23 +187,24 @@ export class NPC {
         if (this.targetResource) {
             const resourceType = this.game.resourceManager.harvestResource(this.targetResource);
             if (resourceType) {
-                this.cargo = resourceType;
+                this.game.addResource(resourceType, 1);
             }
             this.targetResource = null;
         }
-
-        const path = Pathfinder.findPath(this.game.world, this.hitbox.position, this.game.base.position);
-        if (path.length > 0) {
-            this.path = path;
-            this.state = 'MOVING_TO_BASE';
-        } else {
-            this.state = 'IDLE';
-        }
+        // After gathering, immediately go back to idle to find a new resource
+        this.state = 'IDLE';
+        this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
     }
 
     findClosestReachableResource() {
+        const targetType = this.resourceMap[this.specialization];
+        if (!targetType) {
+            console.error(`NPC has unknown specialization: ${this.specialization}`);
+            return null;
+        }
+
         const availableResources = this.game.resourceManager.resources.filter(
-            r => r.mesh.isEnabled() && !r.mesh.metadata.isTargeted
+            r => r.type === targetType && r.mesh.isEnabled() && !r.mesh.metadata.isTargeted
         );
     
         availableResources.sort((a, b) => {

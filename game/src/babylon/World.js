@@ -1,6 +1,7 @@
 
 import * as BABYLON from '@babylonjs/core';
 import { Lamppost } from './Lamppost.js';
+import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class World {
     constructor(game, scene) {
@@ -118,6 +119,8 @@ export class World {
         tile.material = unlocked ? this.unlockedMaterial : this.lockedMaterial;
         tile.receiveShadows = true;
         tile.checkCollisions = true;
+        tile.collisionGroup = COLLISION_GROUPS.TERRAIN;
+        tile.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
 
         tile.metadata = { unlocked, x, z };
         this.tiles[key] = tile;

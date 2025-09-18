@@ -8,6 +8,15 @@ import { UI } from './UI.js';
 import { CycleManager } from './babylon/CycleManager.js';
 import { NPC } from './babylon/NPC.js';
 
+// Collision Groups
+export const COLLISION_GROUPS = {
+    TERRAIN: 1,
+    PLAYER: 2,
+    NPC: 4,
+    WALL: 8,
+    RESOURCE: 16,
+};
+
 export class BabylonGame {
     constructor() {
         this.canvas = this.createCanvas();
@@ -32,12 +41,15 @@ export class BabylonGame {
         this.freeCameraTarget = new BABYLON.Vector3(0, 0, 0);
 
         // Inventory
-        this.wood = 10; // Start with some wood
-        this.stone = 10; // Start with some stone for NPC
+        this.wood = 5; // Start with some wood
+        this.stone = 5; // Start with some stone for NPC
 
         // NPCs
         this.npcs = [];
-        this.npcCost = { wood: 10, stone: 10 };
+        this.npcCosts = {
+            'LUMBERJACK': { wood: 10, stone: 0 },
+            'MINER': { wood: 0, stone: 10 }
+        };
 
         this.ui = new UI(this);
         this.ui.updateWood(this.wood);
@@ -54,6 +66,7 @@ export class BabylonGame {
 
         // Ensure 'this' context for methods passed as callbacks
         this.doContextualAction = this.doContextualAction.bind(this);
+        this.recruitNpc = this.recruitNpc.bind(this);
     }
 
     async initialize() {
@@ -128,6 +141,8 @@ export class BabylonGame {
         ground.material = groundMaterial;
         ground.receiveShadows = true;
         ground.position.y = -0.05; // Position it slightly below the tiles
+        ground.collisionGroup = COLLISION_GROUPS.TERRAIN;
+        ground.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
 
         this.world = new World(this, this.scene);
         this.resourceManager = new ResourceManager(this, this.scene);
@@ -138,6 +153,7 @@ export class BabylonGame {
         // Connect UI to managers
         this.ui.onBuildMenuToggled = (isOpen) => this.buildingManager.toggleBuildMode(isOpen);
         this.ui.onItemSelected = (itemType) => this.buildingManager.selectItemToPlace(itemType);
+        this.ui.onRecruitNpc = this.recruitNpc;
 
         // Connect managers to game cycles
         this.cycleManager.onNightStart = this.handleNightStart;
@@ -300,21 +316,36 @@ export class BabylonGame {
         return minDistance < maxDist ? tileToUnlock : null;
     }
 
+    recruitNpc(specialization) {
+        const cost = this.npcCosts[specialization];
+        if (!cost) {
+            console.error(`Unknown NPC specialization: ${specialization}`);
+            return;
+        }
+
+        if (this.wood >= cost.wood && this.stone >= cost.stone) {
+            this.wood -= cost.wood;
+            this.stone -= cost.stone;
+            this.ui.updateWood(this.wood);
+            this.ui.updateStone(this.stone);
+
+            const npc = new NPC(this, this.base.position.clone(), specialization);
+            this.npcs.push(npc);
+            this.ui.updateNpcCount(this.npcs.length);
+
+            console.log(`Recruited a new ${specialization}!`);
+        } else {
+            console.log(`Not enough resources to recruit a ${specialization}.`);
+        }
+    }
+
     doContextualAction() {
-        // NPC Creation at base
+        // NPC Recruitment at base
         if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            if (this.wood >= this.npcCost.wood && this.stone >= this.npcCost.stone) {
-                this.wood -= this.npcCost.wood;
-                this.stone -= this.npcCost.stone;
-                this.ui.updateWood(this.wood);
-                this.ui.updateStone(this.stone);
-
-                const npc = new NPC(this, this.base.position.clone(), this.models.npc.animationGroups);
-                this.npcs.push(npc);
-                this.ui.updateNpcCount(this.npcs.length);
-
-                console.log("Created a new NPC!");
-                return; // Action taken
+            const canAffordAny = Object.values(this.npcCosts).some(cost => this.wood >= cost.wood && this.stone >= cost.stone);
+            if (canAffordAny) {
+                this.ui.toggleRecruitmentMenu(true);
+                return; // Action taken: opened menu
             }
         }
 
@@ -358,9 +389,10 @@ export class BabylonGame {
             this.highlightLayer.addMesh(tileToUnlock, BABYLON.Color3.Yellow());
         }
 
-        // Highlight base for NPC creation
+        // Highlight base for NPC recruitment
         if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            if (this.wood >= this.npcCost.wood && this.stone >= this.npcCost.stone) {
+            const canAffordAny = Object.values(this.npcCosts).some(cost => this.wood >= cost.wood && this.stone >= cost.stone);
+            if (canAffordAny) {
                 this.base.getChildMeshes().forEach(m => {
                     this.highlightLayer.addMesh(m, BABYLON.Color3.Yellow());
                 });

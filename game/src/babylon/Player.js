@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
+import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class Player {
     constructor(game, mesh, scene, animationGroups) {
@@ -17,6 +18,10 @@ export class Player {
         this.hitbox.checkCollisions = true;
         this.hitbox.ellipsoid = new BABYLON.Vector3(0.25, 0.5, 0.25); // Ellipsoid matches the hitbox dimensions
         this.hitbox.isVisible = false; // Make it true to debug
+
+        // Collision groups
+        this.hitbox.collisionGroup = COLLISION_GROUPS.PLAYER;
+        this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN | COLLISION_GROUPS.WALL | COLLISION_GROUPS.RESOURCE;
 
         // Parent the visual mesh to the hitbox, so it follows automatically
         this.mesh.parent = this.hitbox;

@@ -25,6 +25,11 @@ export class UI {
         this.buildMenu = document.getElementById('build-menu');
         this.craftingItems = document.querySelectorAll('.crafting-item');
 
+        // Recruitment menu elements
+        this.recruitmentMenu = document.getElementById('recruitment-menu');
+        this.closeRecruitmentMenuButton = document.getElementById('close-recruitment-menu-button');
+        this.recruitmentItems = document.querySelectorAll('.recruitment-item');
+
         // Debug
         this.startNightButton = document.getElementById('start-night-button');
 
@@ -35,8 +40,9 @@ export class UI {
         document.body.appendChild(this.saveIndicatorDiv);
 
         // Callbacks
-        this.onBuildMenuToggled = null; // To notify game about menu state
-        this.onItemSelected = null; // Changed from onDragStart
+        this.onBuildMenuToggled = null;
+        this.onItemSelected = null;
+        this.onRecruitNpc = null;
 
         // Initial state
         this.updateWood(0);
@@ -51,6 +57,9 @@ export class UI {
         this.closeBuildMenuButton.addEventListener('click', () => this.toggleBuildMenu(false));
         this.makeDraggable(this.buildMenu, this.buildMenu.querySelector('.panel-header'));
 
+        this.closeRecruitmentMenuButton.addEventListener('click', () => this.toggleRecruitmentMenu(false));
+        this.makeDraggable(this.recruitmentMenu, this.recruitmentMenu.querySelector('.panel-header'));
+
         this.startNightButton.addEventListener('click', () => {
             this.game.cycleManager.startNight();
         });
@@ -62,6 +71,16 @@ export class UI {
                 if (this.onItemSelected) {
                     this.onItemSelected(itemType);
                 }
+            });
+        });
+
+        this.recruitmentItems.forEach(item => {
+            item.addEventListener('click', (event) => {
+                const npcType = event.currentTarget.dataset.npc;
+                if (this.onRecruitNpc) {
+                    this.onRecruitNpc(npcType);
+                }
+                this.toggleRecruitmentMenu(false); // Close menu after selection
             });
         });
     }
@@ -100,6 +119,17 @@ export class UI {
         this.buildMenu.style.display = shouldShow ? 'block' : 'none';
         if (this.onBuildMenuToggled) {
             this.onBuildMenuToggled(shouldShow);
+        }
+        if (shouldShow) {
+            this.toggleRecruitmentMenu(false); // Ensure other panel is closed
+        }
+    }
+
+    toggleRecruitmentMenu(forceState) {
+        const shouldShow = forceState === undefined ? this.recruitmentMenu.style.display === 'none' : forceState;
+        this.recruitmentMenu.style.display = shouldShow ? 'block' : 'none';
+        if (shouldShow) {
+            this.toggleBuildMenu(false); // Ensure other panel is closed
         }
     }
 

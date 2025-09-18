@@ -1,5 +1,6 @@
 
 import * as BABYLON from '@babylonjs/core';
+import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class ResourceManager {
     constructor(game, scene) {
@@ -21,6 +22,13 @@ export class ResourceManager {
         newInstance.position = position;
         newInstance.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
         newInstance.setEnabled(true);
+
+        // Set collision group for all meshes in the resource
+        newInstance.getChildMeshes(false).forEach(mesh => {
+            mesh.checkCollisions = true;
+            mesh.collisionGroup = COLLISION_GROUPS.RESOURCE;
+            mesh.collisionMask = COLLISION_GROUPS.PLAYER;
+        });
 
         const resource = {
             mesh: newInstance,

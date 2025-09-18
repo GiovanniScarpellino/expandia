@@ -259,18 +259,15 @@ canvas {
     }
 }
 
-/* --- Build Menu Panel --- */
-#build-menu.panel {
+/* --- Panel Base Style --- */
+.panel {
     position: fixed;
-    top: 65px;
-    left: 15px;
     width: 280px;
     background-color: #2c3e50;
     border-radius: 12px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.5);
     z-index: 102;
     color: #ecf0f1;
-    /* display: none; */ /* Initially hidden - managed by JS */
 }
 
 .panel-header {
@@ -289,7 +286,7 @@ canvas {
     font-size: 1.2em;
 }
 
-#close-build-menu-button {
+.panel-header button {
     background: none;
     border: none;
     color: #ecf0f1;
@@ -298,7 +295,7 @@ canvas {
     line-height: 1;
     transition: color 0.3s;
 }
-#close-build-menu-button:hover {
+.panel-header button:hover {
     color: #e74c3c;
 }
 
@@ -306,13 +303,20 @@ canvas {
     padding: 15px;
 }
 
-#crafting-list {
+/* --- Build Menu Panel --- */
+#build-menu,
+#recruitment-menu {
+    top: 65px;
+    left: 15px;
+}
+
+#crafting-list, #recruitment-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.crafting-item {
+.crafting-item, .recruitment-item {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -320,23 +324,23 @@ canvas {
     background-color: #34495e;
     border-radius: 8px;
     font-size: 1.1em;
-    cursor: grab;
+    cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.crafting-item:hover {
+.crafting-item:hover, .recruitment-item:hover {
     background-color: #4a627a;
 }
 
-.crafting-item:active {
+.crafting-item:active, .recruitment-item:active {
     cursor: grabbing;
 }
 
-.crafting-item .fa-wall {
+.crafting-item .fa-wall, .recruitment-item .fa-lightbulb {
     color: #bdc3c7;
 }
 
-.crafting-cost {
+.crafting-cost, .recruitment-cost {
     margin-left: auto;
     font-size: 1em;
     color: #bdc3c7;
@@ -344,6 +348,17 @@ canvas {
     align-items: center;
     gap: 4px;
 }
-.crafting-cost .fa-tree {
+.crafting-cost .fa-tree, .recruitment-cost .fa-tree {
     color: #2ecc71;
+}
+.crafting-cost .fa-gem, .recruitment-cost .fa-gem {
+    color: #3498db;
+}
+
+.recruitment-item .fa-axe {
+    color: #c0392b;
+}
+
+.recruitment-item .fa-pickaxe {
+    color: #7f8c8d;
 }

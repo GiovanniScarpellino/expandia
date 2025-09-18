@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
+import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class Wall {
     constructor(buildingManager, position, rotation) {
@@ -10,6 +11,8 @@ export class Wall {
         this.mesh.position = position;
         this.mesh.rotationQuaternion = rotation;
         this.mesh.checkCollisions = true;
+        this.mesh.collisionGroup = COLLISION_GROUPS.WALL;
+        this.mesh.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
         
         const wallMat = new BABYLON.StandardMaterial("wallMat", this.scene);
         wallMat.diffuseColor = BABYLON.Color3.FromHexString("#8B4513"); // SaddleBrown
