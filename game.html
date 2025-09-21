@@ -3,25 +3,96 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://giovanniscarpellino.github.io/expandia/vite.svg" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Expandia</title>
-    <script type="module" crossorigin src="https://giovanniscarpellino.github.io/expandia/assets/game-C3dXDgBu.js"></script>
-    <link rel="stylesheet" crossorigin href="https://giovanniscarpellino.github.io/expandia/assets/game-BR290t1P.css">
+    <script type="module" crossorigin src="https://giovanniscarpellino.github.io/expandia/assets/game-DIKzpnRZ.js"></script>
+    <link rel="stylesheet" crossorigin href="https://giovanniscarpellino.github.io/expandia/assets/game-DR-92o74.css">
   </head>
   <body>
     <div id="loading-screen">
       <div class="spinner"></div>
       <p>Chargement...</p>
     </div>
+
+    <!-- HUD -->
     <div id="hud">
-      <a href="./index.html">Retour au menu (Comment jouer)</a>
-      <div id="quest"></div>
-      <div>
-        <div id="wood">Wood: 0</div>
-        <div id="stone">Stone: 0</div>
-        <div id="health">Health: 100</div>
-        <div id="npc-count">NPCs: 0</div>
+      <!-- Top Left - Resources -->
+      <div id="resources">
+        <div id="wood" class="resource-item"><i class="fas fa-tree"></i> <span>0</span></div>
+        <div id="stone" class="resource-item"><i class="fas fa-gem"></i> <span>0</span></div>
       </div>
+
+      <!-- Top Right - Cycle Info -->
+      <div id="cycle-info">
+        <div id="day-counter">Jour 1</div>
+        <div id="cycle-status"></div>
+        <div id="cycle-timer"></div>
+      </div>
+      
+      <!-- Top Center - Player Stats -->
+      <div id="player-stats">
+        <div id="health"><i class="fas fa-heart"></i> 100</div>
+        <div id="base-health"><i class="fas fa-shield-alt"></i> 1000</div>
+        <div id="npc-count"><i class="fas fa-users"></i> 0</div>
+      </div>
+
+      <!-- Bottom Center - Actions -->
+      <div id="actions">
+        <button id="build-menu-button" class="action-button"><i class="fas fa-hammer"></i></button>
+        <button id="start-night-button" class="action-button"><i class="fas fa-moon"></i></button>
+      </div>
+      
+      <a id="help-link" href="./index.html"><i class="fas fa-question-circle"></i></a>
+    </div>
+  
+    <!-- Build Menu -->
+    <div id="build-menu" class="panel" style="display: none;">
+      <div id="build-menu-header" class="panel-header">
+        <span>Menu de Construction</span>
+        <button id="close-build-menu-button">&times;</button>
+      </div>
+      <div class="panel-content">
+        <div id="crafting-list">
+          <div class="crafting-item" data-item="wall">
+            <i class="fas fa-wall"></i>
+            <span>Mur en bois</span>
+            <span class="crafting-cost">(5 <i class="fas fa-tree"></i>)</span>
+          </div>
+          <div class="crafting-item" data-item="lamppost">
+            <i class="fas fa-lightbulb"></i>
+            <span>Lampadaire</span>
+            <span class="crafting-cost">(5 <i class="fas fa-tree"></i>, 2 <i class="fas fa-gem"></i>)</span>
+          </div>
+          <!-- Add other craftable items here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Recruitment Menu -->
+    <div id="recruitment-menu" class="panel" style="display: none;">
+      <div id="recruitment-menu-header" class="panel-header">
+        <span>Menu de Recrutement</span>
+        <button id="close-recruitment-menu-button">&times;</button>
+      </div>
+      <div class="panel-content">
+        <div id="recruitment-list">
+          <div class="recruitment-item" data-npc="LUMBERJACK">
+            <i class="fas fa-axe"></i> <!-- Using a different icon -->
+            <span>Bûcheron</span>
+            <span class="recruitment-cost">(10 <i class="fas fa-tree"></i>)</span>
+          </div>
+          <div class="recruitment-item" data-npc="MINER">
+            <i class="fas fa-pickaxe"></i> <!-- Using a different icon -->
+            <span>Mineur</span>
+            <span class="recruitment-cost">(10 <i class="fas fa-gem"></i>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="quest-container">
+        <div id="quest"></div>
     </div>
 
     <!-- Mobile Controls -->
@@ -31,7 +102,6 @@
       </div>
       <div id="action-buttons">
         <button id="context-button">✋</button>
-        <button id="attack-button">⚔️</button>
       </div>
     </div>
 
