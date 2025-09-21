@@ -98,7 +98,7 @@ export class BabylonGame {
         };
 
         for (const key in modelUrls) {
-            const result = await BABYLON.SceneLoader.ImportMeshAsync(null, "/src/models/", modelUrls[key], this.scene);
+            const result = await BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", modelUrls[key], this.scene);
             const rootMesh = result.meshes[0];
 
             rootMesh.getChildMeshes(false).forEach(mesh => {
