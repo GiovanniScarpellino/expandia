@@ -6,17 +6,22 @@ export class Player {
         this.game = game;
         this.scene = scene;
 
+        const hitboxHeight = 1.0;
+
         // The visual mesh that the player sees
         this.mesh = mesh;
-        this.mesh.position = new BABYLON.Vector3(0, -0.5, 0); // Centered within the hitbox
-        this.mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+        // Apply a Z-offset to counteract the model's pivot point not being centered
+        this.mesh.position = new BABYLON.Vector3(0, 0, -0.5); 
+        this.mesh.scaling = new BABYLON.Vector3(0.007, 0.007, 0.007);
         this.mesh.checkCollisions = false; // The visual mesh itself doesn't collide
 
         // The invisible collision hitbox
-        this.hitbox = BABYLON.MeshBuilder.CreateBox("playerHitbox", { width: 0.5, height: 1, depth: 0.5 }, scene);
-        this.hitbox.position = new BABYLON.Vector3(0, 0.5, 0); // Positioned at ground level
+        const hitboxWidth = 0.5;
+        const hitboxDepth = 0.5;
+        this.hitbox = BABYLON.MeshBuilder.CreateBox("playerHitbox", { width: hitboxWidth, height: hitboxHeight, depth: hitboxDepth }, scene);
+        this.hitbox.position = new BABYLON.Vector3(0, hitboxHeight / 2, 0); // Positioned at ground level
         this.hitbox.checkCollisions = true;
-        this.hitbox.ellipsoid = new BABYLON.Vector3(0.25, 0.5, 0.25); // Ellipsoid matches the hitbox dimensions
+        this.hitbox.ellipsoid = new BABYLON.Vector3(hitboxWidth / 2, hitboxHeight / 2, hitboxDepth / 2); // Ellipsoid matches the hitbox dimensions
         this.hitbox.isVisible = false; // Make it true to debug
 
         // Collision groups
@@ -40,8 +45,9 @@ export class Player {
         this.activeAnimation = null;
         animationGroups.forEach(group => {
             this.animations[group.name] = group;
+            this.animations[group.name].stop();
         });
-        this.playAnimation('idle');
+        this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
         
         // State & Stats
         this.maxHealth = 100;
@@ -54,6 +60,44 @@ export class Player {
             instance: this,
             takeDamage: (amount) => this.takeDamage(amount)
         };
+
+        // TEMPORARY: Pivot adjustment controls
+        const adjustmentIncrement = 0.1;
+        const adjustmentListener = (e) => {
+            let updated = false;
+            switch (e.key) {
+                case 'ArrowUp':
+                    this.mesh.position.z += adjustmentIncrement;
+                    updated = true;
+                    break;
+                case 'ArrowDown':
+                    this.mesh.position.z -= adjustmentIncrement;
+                    updated = true;
+                    break;
+                case 'ArrowLeft':
+                    this.mesh.position.x -= adjustmentIncrement;
+                    updated = true;
+                    break;
+                case 'ArrowRight':
+                    this.mesh.position.x += adjustmentIncrement;
+                    updated = true;
+                    break;
+                case 'PageUp':
+                    this.mesh.position.y += adjustmentIncrement;
+                    updated = true;
+                    break;
+                case 'PageDown':
+                    this.mesh.position.y -= adjustmentIncrement;
+                    updated = true;
+                    break;
+            }
+            if (updated) {
+                e.preventDefault();
+                console.log(`New mesh position: { x: ${this.mesh.position.x.toFixed(4)}, y: ${this.mesh.position.y.toFixed(4)}, z: ${this.mesh.position.z.toFixed(4)} }`);
+            }
+        };
+        window.addEventListener('keydown', adjustmentListener);
+        // END TEMPORARY
     }
 
     playAnimation(name, loop = true, speed = 1.0) {
@@ -138,13 +182,13 @@ export class Player {
             animation.onAnimationEndObservable.addOnce(() => {
                 if (onHarvestComplete) onHarvestComplete();
                 this.isHarvesting = false;
-                this.playAnimation('idle');
+                // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
             });
         } else {
             setTimeout(() => {
                 if (onHarvestComplete) onHarvestComplete();
                 this.isHarvesting = false;
-                this.playAnimation('idle');
+                // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
             }, 500);
         }
     }
@@ -152,7 +196,7 @@ export class Player {
     update(delta) {
         if (this.isHarvesting || this.game.buildingManager.isBuildingMode) {
             this.currentSpeed = 0;
-            if (!this.isHarvesting) this.playAnimation('idle');
+            // if (!this.isHarvesting) this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
             return; 
         }
 
@@ -166,9 +210,9 @@ export class Player {
         }
 
         if (isMoving && this.currentSpeed > 0) {
-            this.playAnimation('walk');
+            // this.playAnimation('walk');
         } else {
-            this.playAnimation('idle');
+            // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
         }
 
         const direction = new BABYLON.Vector3(0, 0, 0);
@@ -180,7 +224,7 @@ export class Player {
         if (direction.lengthSquared() > 0) {
             direction.normalize();
             
-            this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z) + Math.PI, 0);
+            this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z), 0);
 
             const moveVector = direction.scale(this.currentSpeed);
             const previousPosition = this.hitbox.position.clone();

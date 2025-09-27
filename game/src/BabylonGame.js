@@ -41,19 +41,19 @@ export class BabylonGame {
         this.freeCameraTarget = new BABYLON.Vector3(0, 0, 0);
 
         // Inventory
-        this.wood = 5; // Start with some wood
-        this.stone = 5; // Start with some stone for NPC
+        this.data = 5; // Start with some data
+        this.code = 5; // Start with some code for NPC
 
         // NPCs
         this.npcs = [];
         this.npcCosts = {
-            'LUMBERJACK': { wood: 10, stone: 0 },
-            'MINER': { wood: 0, stone: 10 }
+            'DEV': { data: 10, code: 0 },
+            'TECH': { data: 0, code: 10 }
         };
 
         this.ui = new UI(this);
-        this.ui.updateWood(this.wood);
-        this.ui.updateStone(this.stone);
+        this.ui.updateData(this.data);
+        this.ui.updateCode(this.code);
 
         // Define handlers in constructor to preserve `this` context
         this.handleNightStart = (day) => {
@@ -89,7 +89,7 @@ export class BabylonGame {
 
     async loadModels() {
         const modelUrls = {
-            player: "character-a.glb",
+            player: "Chick.glb",
             npc: "character-l.glb",
             tree: "tree.glb",
             rock: "rock-small.glb",
@@ -278,11 +278,11 @@ export class BabylonGame {
 
     addResource(type, amount) {
         if (type === 'tree') {
-            this.wood += amount;
-            this.ui.updateWood(this.wood);
+            this.data += amount;
+            this.ui.updateData(this.data);
         } else if (type === 'rock') {
-            this.stone += amount;
-            this.ui.updateStone(this.stone);
+            this.code += amount;
+            this.ui.updateCode(this.code);
         }
     }
 
@@ -323,11 +323,11 @@ export class BabylonGame {
             return;
         }
 
-        if (this.wood >= cost.wood && this.stone >= cost.stone) {
-            this.wood -= cost.wood;
-            this.stone -= cost.stone;
-            this.ui.updateWood(this.wood);
-            this.ui.updateStone(this.stone);
+        if (this.data >= cost.data && this.code >= cost.code) {
+            this.data -= cost.data;
+            this.code -= cost.code;
+            this.ui.updateData(this.data);
+            this.ui.updateCode(this.code);
 
             const npc = new NPC(this, this.base.position.clone(), specialization);
             this.npcs.push(npc);
@@ -342,7 +342,7 @@ export class BabylonGame {
     doContextualAction() {
         // NPC Recruitment at base
         if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            const canAffordAny = Object.values(this.npcCosts).some(cost => this.wood >= cost.wood && this.stone >= cost.stone);
+            const canAffordAny = Object.values(this.npcCosts).some(cost => this.data >= cost.data && this.code >= cost.code);
             if (canAffordAny) {
                 this.ui.toggleRecruitmentMenu(true);
                 return; // Action taken: opened menu
@@ -363,12 +363,12 @@ export class BabylonGame {
         const tileToUnlock = this.getClosestUnlockableTile(1.2);
         if (tileToUnlock) {
             const unlockCost = 1;
-            if (this.wood >= unlockCost) {
-                this.wood -= unlockCost;
-                this.ui.updateWood(this.wood);
+            if (this.data >= unlockCost) {
+                this.data -= unlockCost;
+                this.ui.updateData(this.data);
                 this.world.unlockTile(tileToUnlock);
             } else {
-                console.log("Not enough wood to unlock tile!");
+                console.log("Not enough data to unlock tile!");
             }
         }
     }
@@ -391,7 +391,7 @@ export class BabylonGame {
 
         // Highlight base for NPC recruitment
         if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            const canAffordAny = Object.values(this.npcCosts).some(cost => this.wood >= cost.wood && this.stone >= cost.stone);
+            const canAffordAny = Object.values(this.npcCosts).some(cost => this.data >= cost.data && this.code >= cost.code);
             if (canAffordAny) {
                 this.base.getChildMeshes().forEach(m => {
                     this.highlightLayer.addMesh(m, BABYLON.Color3.Yellow());

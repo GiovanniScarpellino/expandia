@@ -3,8 +3,8 @@ export class UI {
         this.game = game;
 
         // Resource elements
-        this.woodSpan = document.querySelector('#wood span');
-        this.stoneSpan = document.querySelector('#stone span');
+        this.dataSpan = document.querySelector('#data span');
+        this.codeSpan = document.querySelector('#code span');
 
         // Player stats elements
         this.healthDiv = document.getElementById('health');
@@ -45,12 +45,12 @@ export class UI {
         this.onRecruitNpc = null;
 
         // Initial state
-        this.updateWood(0);
-        this.updateStone(0);
+        this.updateData(0);
+        this.updateCode(0);
         this.updateHealth(100);
         this.updateBaseHealth(1000, 1000);
         this.updateNpcCount(0);
-        this.updateQuest("Trouvez des ressources pour survivre.");
+        this.updateQuest("Bienvenue, explorateur perdu. Ce secteur est instable. Aidez-nous à le réparer !");
 
         // Event Listeners
         this.buildMenuButton.addEventListener('click', () => this.toggleBuildMenu());
@@ -140,12 +140,12 @@ export class UI {
         }, 2000);
     }
 
-    updateWood(amount) {
-        this.woodSpan.innerText = amount;
+    updateData(amount) {
+        this.dataSpan.innerText = amount;
     }
 
-    updateStone(amount) {
-        this.stoneSpan.innerText = amount;
+    updateCode(amount) {
+        this.codeSpan.innerText = amount;
     }
 
     updateHealth(amount) {
