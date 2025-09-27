@@ -1,6 +1,12 @@
 import * as BABYLON from '@babylonjs/core';
 import { COLLISION_GROUPS } from '../BabylonGame.js';
 
+const ANIMATIONS_NAME = {
+    IDLE: 'idle',
+    RUN: 'run',
+    ATTACK: 'attack'
+}
+
 export class Player {
     constructor(game, mesh, scene, animationGroups) {
         this.game = game;
@@ -10,10 +16,14 @@ export class Player {
 
         // The visual mesh that the player sees
         this.mesh = mesh;
+        const scaling = 0.005;
+
         // Apply a Z-offset to counteract the model's pivot point not being centered
-        this.mesh.position = new BABYLON.Vector3(0, 0, -0.5); 
-        this.mesh.scaling = new BABYLON.Vector3(0.007, 0.007, 0.007);
+        this.mesh.position = new BABYLON.Vector3(0, -hitboxHeight / 2, 0); 
+        this.mesh.scaling = new BABYLON.Vector3(scaling, scaling, scaling);
+        this.mesh.rotation = new BABYLON.Vector3(1.5, 0, 0); // Face forward
         this.mesh.checkCollisions = false; // The visual mesh itself doesn't collide
+        this.mesh.getChildMeshes(true).forEach(m => m.checkCollisions = false);
 
         // The invisible collision hitbox
         const hitboxWidth = 0.5;
@@ -44,10 +54,14 @@ export class Player {
         this.animations = {};
         this.activeAnimation = null;
         animationGroups.forEach(group => {
-            this.animations[group.name] = group;
-            this.animations[group.name].stop();
+            let newName = group.name.toLowerCase();
+            if(group.name.includes('|'))
+                newName = newName.split('|').pop();
+
+            this.animations[newName] = group;
+            this.animations[newName].stop();
         });
-        this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
+        this.playAnimation(ANIMATIONS_NAME.IDLE);
         
         // State & Stats
         this.maxHealth = 100;
@@ -63,8 +77,13 @@ export class Player {
 
         // TEMPORARY: Pivot adjustment controls
         const adjustmentIncrement = 0.1;
+        const rotationIncrement = 0.1; // in radians
+        if (!this.mesh.rotationQuaternion) {
+            this.mesh.rotationQuaternion = BABYLON.Quaternion.FromEulerVector(this.mesh.rotation);
+        }
         const adjustmentListener = (e) => {
             let updated = false;
+            let rotationUpdated = false;
             switch (e.key) {
                 case 'ArrowUp':
                     this.mesh.position.z += adjustmentIncrement;
@@ -90,10 +109,39 @@ export class Player {
                     this.mesh.position.y -= adjustmentIncrement;
                     updated = true;
                     break;
+                case '7':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, -rotationIncrement));
+                    rotationUpdated = true;
+                    break;
+                case '9':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, rotationIncrement));
+                    rotationUpdated = true;
+                    break;
+                case '1':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X, -rotationIncrement));
+                    rotationUpdated = true;
+                    break;
+                case '3':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X, rotationIncrement));
+                    rotationUpdated = true;
+                    break;
+                case '4':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Z, -rotationIncrement));
+                    rotationUpdated = true;
+                    break;
+                case '6':
+                    this.mesh.rotationQuaternion.multiplyInPlace(BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Z, rotationIncrement));
+                    rotationUpdated = true;
+                    break;
             }
             if (updated) {
                 e.preventDefault();
                 console.log(`New mesh position: { x: ${this.mesh.position.x.toFixed(4)}, y: ${this.mesh.position.y.toFixed(4)}, z: ${this.mesh.position.z.toFixed(4)} }`);
+            }
+            if (rotationUpdated) {
+                e.preventDefault();
+                const eulerAngles = this.mesh.rotationQuaternion.toEulerAngles();
+                console.log(`New mesh rotation quaternion: { x: ${eulerAngles.x.toFixed(4)}, y: ${eulerAngles.y.toFixed(4)}, z: ${eulerAngles.z.toFixed(4)} }`);
             }
         };
         window.addEventListener('keydown', adjustmentListener);
@@ -102,7 +150,7 @@ export class Player {
 
     playAnimation(name, loop = true, speed = 1.0) {
         if (this.activeAnimation && this.activeAnimation.name === name) return this.activeAnimation;
-        if (this.isHarvesting && name !== 'pick-up') return null;
+        if (this.isHarvesting && name !== ANIMATIONS_NAME.ATTACK) return null;
 
         const animation = this.animations[name];
         if (animation) {
@@ -177,18 +225,18 @@ export class Player {
     playerHarvest(onHarvestComplete) {
         if (this.isHarvesting) return;
         this.isHarvesting = true;
-        const animation = this.playAnimation('pick-up', false, 1.0);
+        const animation = this.playAnimation(ANIMATIONS_NAME.ATTACK, false, 1.0);
         if (animation) {
             animation.onAnimationEndObservable.addOnce(() => {
                 if (onHarvestComplete) onHarvestComplete();
                 this.isHarvesting = false;
-                // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
+                this.playAnimation(ANIMATIONS_NAME.IDLE);
             });
         } else {
             setTimeout(() => {
                 if (onHarvestComplete) onHarvestComplete();
                 this.isHarvesting = false;
-                // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
+                this.playAnimation(ANIMATIONS_NAME.IDLE);
             }, 500);
         }
     }
@@ -196,7 +244,7 @@ export class Player {
     update(delta) {
         if (this.isHarvesting || this.game.buildingManager.isBuildingMode) {
             this.currentSpeed = 0;
-            // if (!this.isHarvesting) this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
+            if (!this.isHarvesting) this.playAnimation(ANIMATIONS_NAME.IDLE);
             return; 
         }
 
@@ -210,9 +258,9 @@ export class Player {
         }
 
         if (isMoving && this.currentSpeed > 0) {
-            // this.playAnimation('walk');
+            this.playAnimation(ANIMATIONS_NAME.RUN);
         } else {
-            // this.playAnimation('AnimalArmature|AnimalArmature|AnimalArmature|Idle');
+            this.playAnimation(ANIMATIONS_NAME.IDLE);
         }
 
         const direction = new BABYLON.Vector3(0, 0, 0);

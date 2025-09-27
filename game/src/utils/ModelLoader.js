@@ -8,8 +8,7 @@ export class ModelLoader {
 
     load(url) {
         const fullUrl = import.meta.env.BASE_URL === '/' ? url : `${import.meta.env.BASE_URL}${url}`;
-        console.log(fullUrl);
-
+        
         if (this.cache.has(fullUrl)) {
             const cachedGltf = this.cache.get(fullUrl);
             return Promise.resolve({
