@@ -39,9 +39,9 @@ export class Projectile {
         this.mesh.rotation.z += 0.1;
 
         // Check for collision with enemies
-        for (const bug of this.game.bugManager.bugs) {
-            if (this.mesh.intersectsMesh(bug.mesh, false)) {
-                bug.takeDamage(this.damage);
+        for (const enemy of this.game.enemyManager.enemies) {
+            if (this.mesh.intersectsMesh(enemy.mesh, false)) {
+                enemy.takeDamage(this.damage);
                 this.dispose(true); // Dispose with impact effects
                 return; 
             }

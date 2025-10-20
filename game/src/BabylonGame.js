@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { Player } from './babylon/Player.js';
 import { World } from './babylon/World.js';
-import { BugManager } from './managers/BugManager.js';
+import { EnemyManager } from './managers/EnemyManager.js';
 import { UI } from './UI.js';
 
 // Collision Groups
@@ -22,7 +22,7 @@ export class BabylonGame {
         this.scene = null;
         this.player = null;
         this.world = null;
-        this.bugManager = null;
+        this.enemyManager = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
@@ -30,6 +30,7 @@ export class BabylonGame {
         this.yolkSplatMaterial = null;
 
         this.projectiles = [];
+        this.enemyProjectiles = [];
         this.gameState = 'RUNNING'; // RUNNING, PAUSED, GAMEOVER, LEVELUP
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
@@ -85,7 +86,6 @@ export class BabylonGame {
             animationGroups: result.animationGroups
         };
         this.models.player.mesh.setEnabled(false);
-        console.log("Player animations:", result.animationGroups.map(ag => ag.name));
     }
 
     createYolkSplatMaterial() {
@@ -155,7 +155,7 @@ export class BabylonGame {
         ground.isPickable = true;
 
         this.world = new World(this, this.scene);
-        this.bugManager = new BugManager(this);
+        this.enemyManager = new EnemyManager(this);
         this.world.init();
 
         const playerMesh = this.models.player.mesh.clone("player");
@@ -265,6 +265,17 @@ export class BabylonGame {
         }
     }
 
+    addEnemyProjectile(projectile) {
+        this.enemyProjectiles.push(projectile);
+    }
+
+    removeEnemyProjectile(projectile) {
+        const index = this.enemyProjectiles.indexOf(projectile);
+        if (index > -1) {
+            this.enemyProjectiles.splice(index, 1);
+        }
+    }
+
     gameOver() {
         if (this.gameState === 'GAMEOVER') return;
         this.gameState = 'GAMEOVER';
@@ -278,7 +289,7 @@ export class BabylonGame {
             return;
         }
 
-        this.bugManager.start();
+        this.enemyManager.start();
 
         this.engine.runRenderLoop(() => {
             if (this.gameState === 'RUNNING') {
@@ -294,10 +305,14 @@ export class BabylonGame {
                     }
                 }
 
-                this.bugManager.update(delta);
+                this.enemyManager.update(delta);
 
                 for (let i = this.projectiles.length - 1; i >= 0; i--) {
                     this.projectiles[i].update(delta);
+                }
+
+                for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+                    this.enemyProjectiles[i].update(delta);
                 }
             }
             

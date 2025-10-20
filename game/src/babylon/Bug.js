@@ -128,8 +128,8 @@ export class Bug {
             this.game.player.addXp(this.xpValue);
         }
 
-        // Notify BugManager
-        this.game.bugManager.removeBug(this);
+        // Notify EnemyManager
+        this.game.enemyManager.removeEnemy(this);
 
         this.mesh.dispose();
     }
