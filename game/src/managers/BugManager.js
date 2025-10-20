@@ -13,6 +13,7 @@ export class BugManager {
     start() {
         // Start the first wave almost immediately
         this.nextWaveTime = Date.now() + 1000;
+        this.game.ui.updateWaveStats(this.waveNumber, 0);
     }
 
     update(delta) {
@@ -35,6 +36,9 @@ export class BugManager {
             this.spawnBugWave(waveSize);
             this.isWaveInProgress = true;
         }
+
+        // Update UI
+        this.game.ui.updateWaveStats(this.waveNumber, this.bugs.length);
     }
 
     spawnBugWave(count) {

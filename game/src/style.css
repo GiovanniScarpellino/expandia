@@ -132,6 +132,26 @@ canvas {
     transform: translateY(-50%);
 }
 
+#wave-stats {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: right;
+}
+
+#wave-counter {
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
+#enemy-counter {
+    font-size: 0.9em;
+    color: #ccc;
+}
+
 /* --- Level Up Screen --- */
 #upgrade-cards-container {
     display: flex;

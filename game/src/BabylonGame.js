@@ -27,6 +27,7 @@ export class BabylonGame {
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
         this.highlightLayer = null;
+        this.yolkSplatMaterial = null;
 
         this.projectiles = [];
         this.gameState = 'RUNNING'; // RUNNING, PAUSED, GAMEOVER, LEVELUP
@@ -52,7 +53,7 @@ export class BabylonGame {
             {
                 name: "Balles Rapides",
                 description: "Augmente la vitesse des projectiles de 25%.",
-                apply: (player) => { /* To be implemented in Projectile */ player.projectileSpeedModifier = (player.projectileSpeedModifier || 1) * 1.25; }
+                apply: (player) => { player.projectileSpeedModifier = (player.projectileSpeedModifier || 1) * 1.25; }
             },
         ];
     }
@@ -87,8 +88,46 @@ export class BabylonGame {
         console.log("Player animations:", result.animationGroups.map(ag => ag.name));
     }
 
+    createYolkSplatMaterial() {
+        if (this.yolkSplatMaterial) return this.yolkSplatMaterial;
+
+        const textureSize = 256;
+        const texture = new BABYLON.DynamicTexture("yolkTexture", textureSize, this.scene, true);
+        const ctx = texture.getContext();
+
+        // Draw a yellow circle with a bit of an orange outline
+        ctx.fillStyle = "rgba(0,0,0,0)";
+        ctx.fillRect(0, 0, textureSize, textureSize);
+
+        const centerX = textureSize / 2;
+        const centerY = textureSize / 2;
+        const radius = textureSize / 2 - 10;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = '#FFC300'; // Yolk yellow
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#FF5733'; // Orange-red outline
+        ctx.stroke();
+
+        texture.update();
+
+        const material = new BABYLON.StandardMaterial("yolkSplatMat", this.scene);
+        material.diffuseTexture = texture;
+        material.diffuseTexture.hasAlpha = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.emissiveColor = new BABYLON.Color3(0.8, 0.6, 0.1);
+        material.specularColor = new BABYLON.Color3(0, 0, 0);
+        material.backFaceCulling = false;
+
+        this.yolkSplatMaterial = material;
+        return material;
+    }
+
     createScene() {
         this.scene.clearColor = new BABYLON.Color4(0.2, 0.2, 0.3, 1);
+        this.createYolkSplatMaterial(); // Pre-create the material
 
         this.highlightLayer = new BABYLON.HighlightLayer("hl1", this.scene);
         this.camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(0, 10, -10), this.scene);
@@ -203,6 +242,7 @@ export class BabylonGame {
     applyUpgradeAndResume(upgrade) {
         upgrade.apply(this.player);
         this.ui.hideLevelUpScreen();
+        this.ui.updateHealth(this.player.health, this.player.maxHealth);
         this.gameState = 'RUNNING';
     }
 

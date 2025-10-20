@@ -8,6 +8,10 @@ export class UI {
         this.xpBarFill = document.querySelector('#xp-bar-fill');
         this.levelText = document.querySelector('#level-text');
 
+        // Wave stats elements
+        this.waveCounter = document.getElementById('wave-counter');
+        this.enemyCounter = document.getElementById('enemy-counter');
+
         // Overlay screens
         this.gameOverScreen = document.getElementById('game-over-screen');
         this.pauseScreen = document.getElementById('pause-screen');
@@ -17,6 +21,7 @@ export class UI {
         // Initial state
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
+        this.updateWaveStats(0, 0);
     }
 
     togglePauseScreen(show) {
@@ -66,6 +71,15 @@ export class UI {
         }
         if (this.levelText) {
             this.levelText.innerText = `Niv. ${level}`;
+        }
+    }
+
+    updateWaveStats(waveNumber, remainingEnemies) {
+        if (this.waveCounter) {
+            this.waveCounter.innerText = `Manche: ${waveNumber}`;
+        }
+        if (this.enemyCounter) {
+            this.enemyCounter.innerText = `Ennemis: ${remainingEnemies}`;
         }
     }
 }
