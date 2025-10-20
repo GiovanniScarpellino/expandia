@@ -2,19 +2,17 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { Player } from './babylon/Player.js';
 import { World } from './babylon/World.js';
-import { ResourceManager } from './babylon/ResourceManager.js';
-import { BuildingManager } from './managers/BuildingManager.js';
+import { BugManager } from './managers/BugManager.js';
 import { UI } from './UI.js';
-import { CycleManager } from './babylon/CycleManager.js';
-import { NPC } from './babylon/NPC.js';
 
 // Collision Groups
 export const COLLISION_GROUPS = {
     TERRAIN: 1,
     PLAYER: 2,
-    NPC: 4,
+    NPC: 4, // Re-using for enemies
     WALL: 8,
-    RESOURCE: 16,
+    PROJECTILE: 16,
+    GROUND: 32, // For mouse picking
 };
 
 export class BabylonGame {
@@ -24,57 +22,49 @@ export class BabylonGame {
         this.scene = null;
         this.player = null;
         this.world = null;
-        this.resourceManager = null;
-        this.buildingManager = null;
+        this.bugManager = null;
         this.camera = null;
-        this.cameraOffset = new BABYLON.Vector3(0, 10, -8); // Increased offset for better view
+        this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
-        this.base = null;
         this.highlightLayer = null;
-        this.cycleManager = null;
-        this.hemisphericLight = null;
-        this.mainShadowGenerator = null;
 
-        this.isPaused = false;
-        this.cameraKeys = { z: false, s: false, q: false, d: false };
-        this.freeCameraSpeed = 3; // units per second
-        this.freeCameraTarget = new BABYLON.Vector3(0, 0, 0);
-
-        // Inventory
-        this.data = 5; // Start with some data
-        this.code = 5; // Start with some code for NPC
-
-        // NPCs
-        this.npcs = [];
-        this.npcCosts = {
-            'DEV': { data: 10, code: 0 },
-            'TECH': { data: 0, code: 10 }
-        };
+        this.projectiles = [];
+        this.gameState = 'RUNNING'; // RUNNING, PAUSED, GAMEOVER, LEVELUP
+        this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
         this.ui = new UI(this);
-        this.ui.updateData(this.data);
-        this.ui.updateCode(this.code);
 
-        // Define handlers in constructor to preserve `this` context
-        this.handleNightStart = (day) => {
-            console.log("BabylonGame: handleNightStart triggered for day", day);
-        };
-
-        this.handleDayStart = () => {
-            
-        };
-
-        // Ensure 'this' context for methods passed as callbacks
-        this.doContextualAction = this.doContextualAction.bind(this);
-        this.recruitNpc = this.recruitNpc.bind(this);
+        // Upgrade Pool
+        this.upgradePool = [
+            {
+                name: "Vitalité +",
+                description: "Augmente les points de vie maximum de 20.",
+                apply: (player) => {
+                    player.maxHealth += 20;
+                    player.health += 20;
+                }
+            },
+            {
+                name: "Cadence de Tir +",
+                description: "Augmente la vitesse d'attaque de 15%.",
+                apply: (player) => { player.attackSpeed *= 0.85; }
+            },
+            {
+                name: "Balles Rapides",
+                description: "Augmente la vitesse des projectiles de 25%.",
+                apply: (player) => { /* To be implemented in Projectile */ player.projectileSpeedModifier = (player.projectileSpeedModifier || 1) * 1.25; }
+            },
+        ];
     }
 
     async initialize() {
         this.scene = new BABYLON.Scene(this.engine);
         this.scene.collisionsEnabled = true;
+        this.scene.gravity = new BABYLON.Vector3(0, -0.98, 0); // Enable gravity for the scene
         await this.loadModels();
         this.createScene();
         this.setupCameraControls();
+        this.setupInputListeners();
     }
 
     createCanvas() {
@@ -82,322 +72,178 @@ export class BabylonGame {
         canvas.style.width = "100%";
         canvas.style.height = "100%";
         canvas.id = "gameCanvas";
-        canvas.tabIndex = 1; // Make canvas focusable
+        canvas.tabIndex = 1;
         document.body.appendChild(canvas);
         return canvas;
     }
 
     async loadModels() {
-        const modelUrls = {
-            player: "Chick.glb",
-            npc: "character-l.glb",
-            tree: "tree.glb",
-            rock: "rock-small.glb",
-            base: "blade.glb",
-            spawner: "blade.glb",
+        // No models to load for now, placeholders are created procedurally
+        return Promise.resolve();
+    }
+
+    createPlayerPlaceholder() {
+        const egg = new BABYLON.TransformNode("player-root");
+
+        const body = BABYLON.MeshBuilder.CreateSphere("egg-body", { diameter: 1 }, this.scene);
+        body.scaling = new BABYLON.Vector3(0.7, 1, 0.7);
+        body.position.y = 0.5;
+        const bodyMat = new BABYLON.StandardMaterial("eggMat", this.scene);
+        bodyMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.95); // Off-white
+        bodyMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        body.material = bodyMat;
+        body.parent = egg;
+
+        // Return the root node and empty animation groups
+        return {
+            mesh: egg,
+            animationGroups: []
         };
-
-        for (const key in modelUrls) {
-            const result = await BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", modelUrls[key], this.scene);
-            const rootMesh = result.meshes[0];
-
-            rootMesh.getChildMeshes(false).forEach(mesh => {
-                if (mesh.material) {
-                    mesh.material.specularColor = new BABYLON.Color3(0, 0, 0);
-                }
-            });
-
-            rootMesh.setEnabled(false);
-            this.models[key] = {
-                mesh: rootMesh,
-                animationGroups: result.animationGroups
-            };
-        }
     }
 
     createScene() {
+        this.scene.clearColor = new BABYLON.Color4(0.2, 0.2, 0.3, 1);
+
         this.highlightLayer = new BABYLON.HighlightLayer("hl1", this.scene);
         this.camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(0, 10, -10), this.scene);
-        this.camera.inputs.clear(); // We will handle camera inputs manually
+        this.camera.inputs.clear();
 
-        const light = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-0.5, -1, -0.5), this.scene);
+        const light = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(0.8, -0.7, -0.9), this.scene);
         light.position = new BABYLON.Vector3(20, 40, 20);
+        light.intensity = 1.2;
 
-        this.hemisphericLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), this.scene);
-        this.hemisphericLight.groundColor = new BABYLON.Color3(0.1, 0.1, 0.2);
+        const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), this.scene);
+        hemiLight.intensity = 0.7;
+        hemiLight.groundColor = new BABYLON.Color3(0.6, 0.6, 0.8);
 
-        this.cycleManager = new CycleManager(this.scene, this.ui, light, this.hemisphericLight);
+        const shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
+        shadowGenerator.useBlurExponentialShadowMap = true;
+        shadowGenerator.blurKernel = 64;
+        shadowGenerator.darkness = 0.3;
 
-        this.mainShadowGenerator = new BABYLON.ShadowGenerator(2048, light);
-        this.mainShadowGenerator.useBlurExponentialShadowMap = true;
-        this.mainShadowGenerator.blurKernel = 64;
-        this.mainShadowGenerator.darkness = 0.5;
-
-        // Create a large ground plane for visual effect
-        const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 100, height: 100}, this.scene);
-        const groundMaterial = new BABYLON.StandardMaterial("groundMat", this.scene);
-        groundMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3); // Brownish color
-        groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-        ground.material = groundMaterial;
-        ground.receiveShadows = true;
-        ground.position.y = -0.05; // Position it slightly below the tiles
-        ground.collisionGroup = COLLISION_GROUPS.TERRAIN;
-        ground.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
+        // Create a large, invisible ground plane for mouse picking
+        const ground = BABYLON.MeshBuilder.CreateGround("mouseGround", { width: 1000, height: 1000 }, this.scene);
+        ground.material = new BABYLON.StandardMaterial("groundMat", this.scene);
+        ground.material.alpha = 0; // Make it invisible
+        ground.checkCollisions = false; // Player should not collide with it
+        ground.collisionGroup = COLLISION_GROUPS.GROUND;
+        ground.isPickable = true;
 
         this.world = new World(this, this.scene);
-        this.resourceManager = new ResourceManager(this, this.scene);
-        this.buildingManager = new BuildingManager(this);
-        
+        this.bugManager = new BugManager(this);
         this.world.init();
 
-        // Connect UI to managers
-        this.ui.onBuildMenuToggled = (isOpen) => this.buildingManager.toggleBuildMode(isOpen);
-        this.ui.onItemSelected = (itemType) => this.buildingManager.selectItemToPlace(itemType);
-        this.ui.onRecruitNpc = this.recruitNpc;
+        const playerPlaceholder = this.createPlayerPlaceholder();
+        playerPlaceholder.mesh.name = "player";
+        playerPlaceholder.mesh.getChildMeshes().forEach(m => shadowGenerator.addShadowCaster(m, true));
 
-        // Connect managers to game cycles
-        this.cycleManager.onNightStart = this.handleNightStart;
-        this.cycleManager.onDayStart = this.handleDayStart;
-        this.cycleManager.setLampposts(this.world.lampposts);
-
-        // Create initial resources
-        this.resourceManager.createResource('tree', new BABYLON.Vector3(2, 0, 2));
-        this.resourceManager.createResource('rock', new BABYLON.Vector3(-2, 0, 2));
-
-        // Add the base
-        const baseMesh = this.models.base.mesh.clone("base");
-        baseMesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        baseMesh.position = new BABYLON.Vector3(0, 0, -2);
-        baseMesh.rotation.y = Math.PI / 2;
-        baseMesh.setEnabled(true);
-        this.base = baseMesh;
-        this.addShadowCaster(this.base);
-        this.base.getChildMeshes().forEach(m => m.receiveShadows = true);
-
-        this.base.metadata = {
-            health: 1000,
-            maxHealth: 1000,
-            takeDamage: (amount) => {
-                this.base.metadata.health -= amount;
-                this.ui.updateBaseHealth(this.base.metadata.health, this.base.metadata.maxHealth);
-                if (this.base.metadata.health <= 0) {
-                    this.base.metadata.health = 0;
-                    console.error("GAME OVER - La base a été détruite !");
-                }
-            }
-        };
-        this.ui.updateBaseHealth(this.base.metadata.health, this.base.metadata.maxHealth);
-
-        const playerMesh = this.models.player.mesh;
-        playerMesh.name = "player";
-        playerMesh.setEnabled(true);
-        this.addShadowCaster(playerMesh);
-        
-        const animationGroups = this.models.player.animationGroups;
-        this.player = new Player(this, playerMesh, this.scene, animationGroups);
+        this.player = new Player(this, playerPlaceholder.mesh, this.scene, playerPlaceholder.animationGroups);
+        this.ui.updateHealth(this.player.health, this.player.maxHealth);
 
         this.camera.setTarget(this.player.hitbox.position);
 
-        this.scene.onPointerObservable.add((pointerInfo) => {
-            switch (pointerInfo.type) {
-                case BABYLON.PointerEventTypes.POINTERDOWN:
-                    if (this.buildingManager.isPlacing) {
-                        this.buildingManager.confirmPlacement();
-                    }
-                    break;
-                case BABYLON.PointerEventTypes.POINTERMOVE:
-                    if (this.buildingManager.isPlacing) {
-                        this.buildingManager.updateGhostMeshPosition();
-                    }
-                    break;
-            }
-        });
+        // Post-processing
+        const pipeline = new BABYLON.DefaultRenderingPipeline("defaultPipeline", true, this.scene, [this.camera]);
+        pipeline.samples = 4;
+        pipeline.bloomEnabled = true;
+        pipeline.bloomThreshold = 0.8;
+        pipeline.bloomWeight = 0.3;
+        pipeline.fxaaEnabled = true;
     }
 
     setupCameraControls() {
-        this.canvas.addEventListener('keydown', (e) => {
-            if (this.buildingManager.isPlacing) {
-                this.buildingManager.handlePlacementKeyPress(e);
-                return; // Prevent other keydowns while placing
-            }
-
-            if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
-                this.cameraKeys[e.key] = true;
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (this.buildingManager.isBuildingMode && e.key in this.cameraKeys) {
-                this.cameraKeys[e.key] = false;
-            }
-        });
         window.addEventListener('wheel', (e) => {
-            const zoomSpeed = 0.2; // Reduced zoom speed
-            // Adjust the camera offset for zooming
+            const zoomSpeed = 0.3;
             let newY = this.cameraOffset.y + (e.deltaY > 0 ? zoomSpeed : -zoomSpeed);
             let newZ = this.cameraOffset.z - (e.deltaY > 0 ? zoomSpeed * 0.75 : -zoomSpeed * 0.75);
-            
-            // Clamp the zoom levels
-            this.cameraOffset.y = Math.max(5, Math.min(25, newY));
-            this.cameraOffset.z = Math.min(-4, Math.max(-20, newZ));
+            this.cameraOffset.y = Math.max(6, Math.min(25, newY));
+            this.cameraOffset.z = Math.min(-5, Math.max(-20, newZ));
         }, { passive: true });
     }
 
-    updateFreeCamera(delta) {
-        const moveDirection = new BABYLON.Vector3(0, 0, 0);
-        if (this.cameraKeys.z) moveDirection.z += 1;
-        if (this.cameraKeys.s) moveDirection.z -= 1;
-        if (this.cameraKeys.q) moveDirection.x -= 1;
-        if (this.cameraKeys.d) moveDirection.x += 1;
-
-        if (moveDirection.lengthSquared() > 0) {
-            moveDirection.normalize();
-            const moveVector = moveDirection.scale(this.freeCameraSpeed * delta);
-            const newTarget = this.freeCameraTarget.clone().add(moveVector);
-
-            if (this.world.isPositionNearUnlockedTile(newTarget)) {
-                this.freeCameraTarget.copyFrom(newTarget);
+    setupInputListeners() {
+        // Mouse input
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            if (this.gameState !== 'RUNNING') return;
+            switch (pointerInfo.type) {
+                case BABYLON.PointerEventTypes.POINTERMOVE:
+                    const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.collisionGroup === COLLISION_GROUPS.GROUND);
+                    if (pickResult.hit) {
+                        this.mousePositionInWorld = pickResult.pickedPoint;
+                    }
+                    break;
+                case BABYLON.PointerEventTypes.POINTERDOWN:
+                    if (this.player) {
+                        this.player.attack();
+                    }
+                    break;
             }
-        }
-        
-        this.camera.setTarget(this.freeCameraTarget);
-        this.camera.position = this.freeCameraTarget.clone().add(this.cameraOffset);
+        });
+
+        // Keyboard input
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.togglePause();
+            }
+        });
     }
 
-    setPaused(isPaused) {
-        this.isPaused = isPaused;
-        this.cycleManager.paused = isPaused;
-        if (isPaused) {
-            this.camera.setTarget(this.player.hitbox.position.clone());
+    togglePause() {
+        if (this.gameState === 'GAMEOVER' || this.gameState === 'LEVELUP') return;
+
+        if (this.gameState === 'RUNNING') {
+            this.gameState = 'PAUSED';
+            this.ui.togglePauseScreen(true);
+        } else if (this.gameState === 'PAUSED') {
+            this.gameState = 'RUNNING';
+            this.ui.togglePauseScreen(false);
         }
+    }
+
+    startLevelUp() {
+        this.gameState = 'LEVELUP';
+        
+        // Get 3 unique random upgrades
+        const availableUpgrades = [...this.upgradePool];
+        const chosenUpgrades = [];
+        for (let i = 0; i < 3 && availableUpgrades.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * availableUpgrades.length);
+            chosenUpgrades.push(availableUpgrades.splice(randomIndex, 1)[0]);
+        }
+
+        this.ui.showLevelUpScreen(chosenUpgrades);
+    }
+
+    applyUpgradeAndResume(upgrade) {
+        upgrade.apply(this.player);
+        this.ui.hideLevelUpScreen();
+        this.gameState = 'RUNNING';
     }
 
     addShadowCaster(mesh) {
-        this.mainShadowGenerator.addShadowCaster(mesh, true);
-    }
-
-    addResource(type, amount) {
-        if (type === 'tree') {
-            this.data += amount;
-            this.ui.updateData(this.data);
-        } else if (type === 'rock') {
-            this.code += amount;
-            this.ui.updateCode(this.code);
-        }
-    }
-
-    getClosestResource(maxDist) {
-        let closestResource = null;
-        let minDistance = Infinity;
-        this.resourceManager.resources.forEach(resource => {
-            if (!resource.mesh.isEnabled()) return;
-            const distance = BABYLON.Vector3.Distance(this.player.hitbox.position, resource.mesh.position);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestResource = resource;
+        this.scene.lights.forEach(light => {
+            if (light.getShadowGenerator()) {
+                light.getShadowGenerator().addShadowCaster(mesh, true);
             }
         });
-        return minDistance < maxDist ? closestResource : null;
     }
 
-    getClosestUnlockableTile(maxDist) {
-        let tileToUnlock = null;
-        let minDistance = Infinity;
-        for (const key in this.world.tiles) {
-            const tile = this.world.tiles[key];
-            if (!tile.metadata.unlocked) {
-                const distance = BABYLON.Vector3.Distance(this.player.hitbox.position, tile.position);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    tileToUnlock = tile;
-                }
-            }
-        }
-        return minDistance < maxDist ? tileToUnlock : null;
+    addProjectile(projectile) {
+        this.projectiles.push(projectile);
     }
 
-    recruitNpc(specialization) {
-        const cost = this.npcCosts[specialization];
-        if (!cost) {
-            console.error(`Unknown NPC specialization: ${specialization}`);
-            return;
-        }
-
-        if (this.data >= cost.data && this.code >= cost.code) {
-            this.data -= cost.data;
-            this.code -= cost.code;
-            this.ui.updateData(this.data);
-            this.ui.updateCode(this.code);
-
-            const npc = new NPC(this, this.base.position.clone(), specialization);
-            this.npcs.push(npc);
-            this.ui.updateNpcCount(this.npcs.length);
-
-            console.log(`Recruited a new ${specialization}!`);
-        } else {
-            console.log(`Not enough resources to recruit a ${specialization}.`);
+    removeProjectile(projectile) {
+        const index = this.projectiles.indexOf(projectile);
+        if (index > -1) {
+            this.projectiles.splice(index, 1);
         }
     }
 
-    doContextualAction() {
-        // NPC Recruitment at base
-        if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            const canAffordAny = Object.values(this.npcCosts).some(cost => this.data >= cost.data && this.code >= cost.code);
-            if (canAffordAny) {
-                this.ui.toggleRecruitmentMenu(true);
-                return; // Action taken: opened menu
-            }
-        }
-
-        const resourceToHarvest = this.getClosestResource(1.0);
-        if (resourceToHarvest) {
-            this.player.playerHarvest(() => {
-                const resourceType = this.resourceManager.harvestResource(resourceToHarvest);
-                if (resourceType) {
-                    this.addResource(resourceType, 1);
-                }
-            });
-            return;
-        }
-
-        const tileToUnlock = this.getClosestUnlockableTile(1.2);
-        if (tileToUnlock) {
-            const unlockCost = 1;
-            if (this.data >= unlockCost) {
-                this.data -= unlockCost;
-                this.ui.updateData(this.data);
-                this.world.unlockTile(tileToUnlock);
-            } else {
-                console.log("Not enough data to unlock tile!");
-            }
-        }
-    }
-
-    updateInteractionHighlights() {
-        this.highlightLayer.removeAllMeshes();
-
-        const resourceToHarvest = this.getClosestResource(1.0);
-        if (resourceToHarvest) {
-            resourceToHarvest.mesh.getChildMeshes().forEach(m => {
-                this.highlightLayer.addMesh(m, BABYLON.Color3.Green());
-            });
-            return;
-        }
-
-        const tileToUnlock = this.getClosestUnlockableTile(1.2);
-        if (tileToUnlock) {
-            this.highlightLayer.addMesh(tileToUnlock, BABYLON.Color3.Yellow());
-        }
-
-        // Highlight base for NPC recruitment
-        if (this.base && BABYLON.Vector3.Distance(this.player.hitbox.position, this.base.position) < 2.0) {
-            const canAffordAny = Object.values(this.npcCosts).some(cost => this.data >= cost.data && this.code >= cost.code);
-            if (canAffordAny) {
-                this.base.getChildMeshes().forEach(m => {
-                    this.highlightLayer.addMesh(m, BABYLON.Color3.Yellow());
-                });
-            }
-        }
+    gameOver() {
+        if (this.gameState === 'GAMEOVER') return;
+        this.gameState = 'GAMEOVER';
+        this.ui.showGameOverScreen();
+        console.log("Game Over!");
     }
 
     start() {
@@ -406,32 +252,29 @@ export class BabylonGame {
             return;
         }
 
+        this.bugManager.start();
+
         this.engine.runRenderLoop(() => {
-            const delta = this.engine.getDeltaTime() / 1000;
+            if (this.gameState === 'RUNNING') {
+                const delta = this.engine.getDeltaTime() / 1000;
 
-            this.updateInteractionHighlights();
-            
-            if (this.buildingManager.isBuildingMode) {
-                this.updateFreeCamera(delta);
-            } else {
-                if (this.player) {
-                    this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
-                    this.camera.setTarget(this.player.hitbox.position);
-                }
-            }
-
-            if (!this.isPaused) {
-                this.cycleManager.update(delta);
                 if (this.player) {
                     this.player.update(delta);
+                    this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
+                    this.camera.setTarget(this.player.hitbox.position);
+
+                    if (this.player.hitbox.position.y < -10) {
+                        this.gameOver();
+                    }
                 }
-                this.npcs.forEach(npc => npc.update(delta));
+
+                this.bugManager.update(delta);
+
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    this.projectiles[i].update(delta);
+                }
             }
             
-            if (this.resourceManager) {
-                this.resourceManager.update();
-            }
-
             this.scene.render();
         });
 

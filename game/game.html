@@ -14,93 +14,51 @@
       <p>Chargement...</p>
     </div>
 
+    <!-- Level Up Screen -->
+    <div id="levelup-screen" class="fullscreen-overlay" style="display: none;">
+        <div class="overlay-content">
+          <h1>Niveau Supérieur !</h1>
+          <p>Choisissez une amélioration :</p>
+          <div id="upgrade-cards-container"></div>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pause-screen" class="fullscreen-overlay" style="display: none;">
+      <div class="overlay-content">
+        <h1>Pause</h1>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="fullscreen-overlay" style="display: none;">
+      <div class="overlay-content">
+        <h1>Connexion Perdue</h1>
+        <p>Le Poussin a été corrompu.</p>
+        <button onclick="window.location.reload()">Réessayer</button>
+      </div>
+    </div>
+
     <!-- HUD -->
     <div id="hud">
-      <!-- Top Left - Resources -->
-      <div id="resources">
-        <div id="data" class="resource-item"><i class="fas fa-database"></i> <span>0</span></div>
-        <div id="code" class="resource-item"><i class="fas fa-code"></i> <span>0</span></div>
-      </div>
-
-      <!-- Top Right - Cycle Info -->
-      <div id="cycle-info">
-        <div id="day-counter">Jour 1</div>
-        <div id="cycle-status"></div>
-        <div id="cycle-timer"></div>
-      </div>
-      
-      <!-- Top Center - Player Stats -->
       <div id="player-stats">
-        <div id="health"><i class="fas fa-heart"></i> 100</div>
-        <div id="base-health"><i class="fas fa-shield-alt"></i> 1000</div>
-        <div id="npc-count"><i class="fas fa-users"></i> 0</div>
-      </div>
-
-      <!-- Bottom Center - Actions -->
-      <div id="actions">
-        <button id="build-menu-button" class="action-button"><i class="fas fa-hammer"></i></button>
-        <button id="start-night-button" class="action-button"><i class="fas fa-moon"></i></button>
+        <div class="health-bar-container">
+            <div id="health-bar-fill"></div>
+            <span id="health-text">100 / 100</span>
+        </div>
+        <div class="xp-bar-container">
+            <div id="xp-bar-fill"></div>
+            <span id="level-text">Niv. 1</span>
+        </div>
       </div>
       
       <a id="help-link" href="./index.html"><i class="fas fa-question-circle"></i></a>
-    </div>
-  
-    <!-- Build Menu -->
-    <div id="build-menu" class="panel" style="display: none;">
-      <div id="build-menu-header" class="panel-header">
-        <span>Menu de Déploiement</span>
-        <button id="close-build-menu-button">&times;</button>
-      </div>
-      <div class="panel-content">
-        <div id="crafting-list">
-          <div class="crafting-item" data-item="wall">
-            <i class="fas fa-shield-alt"></i>
-            <span>Pare-feu</span>
-            <span class="crafting-cost">(5 <i class="fas fa-database"></i>)</span>
-          </div>
-          <div class="crafting-item" data-item="lamppost">
-            <i class="fas fa-wifi"></i>
-            <span>Borne Wifi</span>
-            <span class="crafting-cost">(5 <i class="fas fa-database"></i>, 2 <i class="fas fa-code"></i>)</span>
-          </div>
-          <!-- Add other craftable items here -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Recruitment Menu -->
-    <div id="recruitment-menu" class="panel" style="display: none;">
-      <div id="recruitment-menu-header" class="panel-header">
-        <span>Menu de Recrutement</span>
-        <button id="close-recruitment-menu-button">&times;</button>
-      </div>
-      <div class="panel-content">
-        <div id="recruitment-list">
-          <div class="recruitment-item" data-npc="DEV">
-            <i class="fas fa-file-code"></i>
-            <span>Dev-poussin</span>
-            <span class="recruitment-cost">(10 <i class="fas fa-database"></i>)</span>
-          </div>
-          <div class="recruitment-item" data-npc="TECH">
-            <i class="fas fa-microchip"></i>
-            <span>Tech-poussin</span>
-            <span class="recruitment-cost">(10 <i class="fas fa-code"></i>)</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="quest-container">
-        <div id="quest"></div>
     </div>
 
     <!-- Mobile Controls -->
     <div id="mobile-controls">
       <div id="joystick-area">
         <div id="joystick"></div>
-      </div>
-      <div id="action-buttons">
-        <button id="context-button">✋</button>
       </div>
     </div>
 

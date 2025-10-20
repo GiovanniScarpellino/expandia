@@ -8,17 +8,17 @@ export class NPC {
         this.scene = game.scene;
         this.specialization = specialization;
         this.resourceMap = {
-            'LUMBERJACK': 'tree',
-            'MINER': 'rock'
+            'DEV': 'code', // DEV collects code
         };
 
-        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING
+        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_CORRUPTED_TILE, CLEANING
         this.path = [];
-        this.targetResource = null;
+        this.target = null; // Can be a resource or a tile
 
         // Config
         this.speed = 1.5; // units per second
         this.gatheringTime = 3; // seconds
+        this.cleaningTime = 2; // seconds
         this.timer = 0;
 
         // Pathfinding & State Timers
@@ -102,20 +102,38 @@ export class NPC {
                 case 'GATHERING':
                     this.handleGatheringState(delta);
                     break;
+                case 'MOVING_TO_CORRUPTED_TILE':
+                    this.handleMoveState(delta, 'CLEANING');
+                    break;
+                case 'CLEANING':
+                    this.handleCleaningState(delta);
+                    break;
             }
         }
         this.hitbox.moveWithCollisions(new BABYLON.Vector3(0, -0.1, 0));
     }
 
     handleIdleState() {
-        const result = this.findClosestReachableResource();
-        if (result) {
-            this.targetResource = result.resource;
-            this.path = result.path;
-            this.targetResource.mesh.metadata.isTargeted = true;
-            this.state = 'MOVING_TO_RESOURCE';
-            this.idleSearchTimer = 0; // Reset timer after finding a path
+        if (this.specialization === 'DEV') {
+            const result = this.findClosestReachableResource();
+            if (result) {
+                this.target = result.resource;
+                this.path = result.path;
+                this.target.mesh.metadata.isTargeted = true;
+                this.state = 'MOVING_TO_RESOURCE';
+            }
+        } else if (this.specialization === 'TECH') {
+            const tile = this.game.world.getClosestCorruptedTile(this.hitbox.position);
+            if (tile) {
+                const path = Pathfinder.findPath(this.game.world, this.hitbox.position, tile.position);
+                if (path && path.length > 0) {
+                    this.target = tile;
+                    this.path = path;
+                    this.state = 'MOVING_TO_CORRUPTED_TILE';
+                }
+            }
         }
+        this.idleSearchTimer = 0; // Reset timer after a search attempt
     }
 
     handleMoveState(delta, nextState) {
@@ -126,10 +144,10 @@ export class NPC {
         if (this.stuckTimer >= this.stuckCheckInterval) {
             const distanceMoved = BABYLON.Vector3.Distance(this.lastPosition, this.hitbox.position);
             if (distanceMoved < 0.1) { // Moved less than 10cm in 1 second
-                if (this.targetResource) {
-                    this.targetResource.mesh.metadata.isTargeted = false; // Release the target
-                    this.targetResource = null;
+                if (this.target && this.target.mesh) {
+                    this.target.mesh.metadata.isTargeted = false; // Release the target resource
                 }
+                this.target = null;
                 this.state = 'IDLE';
                 this.path = [];
                 this.stuckTimer = 0;
@@ -170,7 +188,7 @@ export class NPC {
         this.timer += delta;
         if (this.timer >= this.gatheringTime) {
             this.timer = 0;
-            if (this.targetResource) {
+            if (this.target) {
                 const anim = this.playAnimation('pick-up', false);
                 if (anim) {
                     anim.onAnimationEndObservable.addOnce(() => this.finishGathering());
@@ -184,14 +202,41 @@ export class NPC {
     }
 
     finishGathering() {
-        if (this.targetResource) {
-            const resourceType = this.game.resourceManager.harvestResource(this.targetResource);
+        if (this.target) {
+            const resourceType = this.game.resourceManager.harvestResource(this.target);
             if (resourceType) {
                 this.game.addResource(resourceType, 1);
             }
-            this.targetResource = null;
+            this.target = null;
         }
         // After gathering, immediately go back to idle to find a new resource
+        this.state = 'IDLE';
+        this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
+    }
+
+    handleCleaningState(delta) {
+        this.playAnimation('idle');
+        this.timer += delta;
+        if (this.timer >= this.cleaningTime) {
+            this.timer = 0;
+            if (this.target) {
+                const anim = this.playAnimation('pick-up', false); // Reuse pick-up animation
+                if (anim) {
+                    anim.onAnimationEndObservable.addOnce(() => this.finishCleaning());
+                } else {
+                    this.finishCleaning();
+                }
+            } else {
+                this.state = 'IDLE';
+            }
+        }
+    }
+
+    finishCleaning() {
+        if (this.target) {
+            this.game.world.cleanTile(this.target);
+            this.target = null;
+        }
         this.state = 'IDLE';
         this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
     }
@@ -199,7 +244,7 @@ export class NPC {
     findClosestReachableResource() {
         const targetType = this.resourceMap[this.specialization];
         if (!targetType) {
-            console.error(`NPC has unknown specialization: ${this.specialization}`);
+            console.error(`NPC has no resource target for specialization: ${this.specialization}`);
             return null;
         }
 

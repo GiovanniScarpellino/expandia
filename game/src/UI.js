@@ -2,188 +2,70 @@ export class UI {
     constructor(game) {
         this.game = game;
 
-        // Resource elements
-        this.dataSpan = document.querySelector('#data span');
-        this.codeSpan = document.querySelector('#code span');
-
         // Player stats elements
-        this.healthDiv = document.getElementById('health');
-        this.baseHealthDiv = document.getElementById('base-health');
-        this.npcCountDiv = document.getElementById('npc-count');
+        this.healthBarFill = document.querySelector('#health-bar-fill');
+        this.healthText = document.querySelector('#health-text');
+        this.xpBarFill = document.querySelector('#xp-bar-fill');
+        this.levelText = document.querySelector('#level-text');
 
-        // Cycle elements
-        this.dayCounterDiv = document.getElementById('day-counter');
-        this.cycleStatusDiv = document.getElementById('cycle-status');
-        this.cycleTimerDiv = document.getElementById('cycle-timer');
-
-        // Quest element
-        this.questDiv = document.getElementById('quest');
-
-        // Build menu elements
-        this.buildMenuButton = document.getElementById('build-menu-button');
-        this.closeBuildMenuButton = document.getElementById('close-build-menu-button');
-        this.buildMenu = document.getElementById('build-menu');
-        this.craftingItems = document.querySelectorAll('.crafting-item');
-
-        // Recruitment menu elements
-        this.recruitmentMenu = document.getElementById('recruitment-menu');
-        this.closeRecruitmentMenuButton = document.getElementById('close-recruitment-menu-button');
-        this.recruitmentItems = document.querySelectorAll('.recruitment-item');
-
-        // Debug
-        this.startNightButton = document.getElementById('start-night-button');
-
-        // Save indicator
-        this.saveIndicatorDiv = document.createElement('div');
-        this.saveIndicatorDiv.id = 'save-indicator';
-        this.saveIndicatorDiv.innerText = 'Partie sauvegardée !';
-        document.body.appendChild(this.saveIndicatorDiv);
-
-        // Callbacks
-        this.onBuildMenuToggled = null;
-        this.onItemSelected = null;
-        this.onRecruitNpc = null;
+        // Overlay screens
+        this.gameOverScreen = document.getElementById('game-over-screen');
+        this.pauseScreen = document.getElementById('pause-screen');
+        this.levelUpScreen = document.getElementById('levelup-screen');
+        this.upgradeCardsContainer = document.getElementById('upgrade-cards-container');
 
         // Initial state
-        this.updateData(0);
-        this.updateCode(0);
-        this.updateHealth(100);
-        this.updateBaseHealth(1000, 1000);
-        this.updateNpcCount(0);
-        this.updateQuest("Bienvenue, explorateur perdu. Ce secteur est instable. Aidez-nous à le réparer !");
+        this.updateHealth(100, 100);
+        this.updateXpBar(0, 100, 1);
+    }
 
-        // Event Listeners
-        this.buildMenuButton.addEventListener('click', () => this.toggleBuildMenu());
-        this.closeBuildMenuButton.addEventListener('click', () => this.toggleBuildMenu(false));
-        this.makeDraggable(this.buildMenu, this.buildMenu.querySelector('.panel-header'));
+    togglePauseScreen(show) {
+        this.pauseScreen.style.display = show ? 'flex' : 'none';
+    }
 
-        this.closeRecruitmentMenuButton.addEventListener('click', () => this.toggleRecruitmentMenu(false));
-        this.makeDraggable(this.recruitmentMenu, this.recruitmentMenu.querySelector('.panel-header'));
+    showGameOverScreen() {
+        this.gameOverScreen.style.display = 'flex';
+    }
 
-        this.startNightButton.addEventListener('click', () => {
-            this.game.cycleManager.startNight();
-        });
+    showLevelUpScreen(upgrades) {
+        // Clear previous cards
+        this.upgradeCardsContainer.innerHTML = '';
 
-        this.craftingItems.forEach(item => {
-            item.addEventListener('click', (event) => {
-                this.game.canvas.focus();
-                const itemType = event.currentTarget.dataset.item;
-                if (this.onItemSelected) {
-                    this.onItemSelected(itemType);
-                }
+        // Create new cards
+        upgrades.forEach(upgrade => {
+            const card = document.createElement('div');
+            card.className = 'upgrade-card';
+            card.innerHTML = `<h3>${upgrade.name}</h3><p>${upgrade.description}</p>`;
+            card.addEventListener('click', () => {
+                this.game.applyUpgradeAndResume(upgrade);
             });
+            this.upgradeCardsContainer.appendChild(card);
         });
 
-        this.recruitmentItems.forEach(item => {
-            item.addEventListener('click', (event) => {
-                const npcType = event.currentTarget.dataset.npc;
-                if (this.onRecruitNpc) {
-                    this.onRecruitNpc(npcType);
-                }
-                this.toggleRecruitmentMenu(false); // Close menu after selection
-            });
-        });
+        this.levelUpScreen.style.display = 'flex';
     }
 
-    makeDraggable(element, handle) {
-        let isDragging = false;
-        let offsetX, offsetY;
-
-        const onMouseDown = (e) => {
-            isDragging = true;
-            offsetX = e.clientX - element.offsetLeft;
-            offsetY = e.clientY - element.offsetTop;
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            element.style.left = `${e.clientX - offsetX}px`;
-            element.style.top = `${e.clientY - offsetY}px`;
-            // Remove transform to prevent conflict with positioning
-            element.style.transform = ''; 
-        };
-
-        const onMouseUp = () => {
-            isDragging = false;
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        };
-
-        handle.addEventListener('mousedown', onMouseDown);
+    hideLevelUpScreen() {
+        this.levelUpScreen.style.display = 'none';
     }
 
-    toggleBuildMenu(forceState) {
-        const shouldShow = forceState === undefined ? this.buildMenu.style.display === 'none' : forceState;
-        this.buildMenu.style.display = shouldShow ? 'block' : 'none';
-        if (this.onBuildMenuToggled) {
-            this.onBuildMenuToggled(shouldShow);
+    updateHealth(currentHealth, maxHealth) {
+        const percentage = (currentHealth / maxHealth) * 100;
+        if (this.healthBarFill) {
+            this.healthBarFill.style.width = `${percentage}%`;
         }
-        if (shouldShow) {
-            this.toggleRecruitmentMenu(false); // Ensure other panel is closed
+        if (this.healthText) {
+            this.healthText.innerText = `${currentHealth} / ${maxHealth}`;
         }
     }
 
-    toggleRecruitmentMenu(forceState) {
-        const shouldShow = forceState === undefined ? this.recruitmentMenu.style.display === 'none' : forceState;
-        this.recruitmentMenu.style.display = shouldShow ? 'block' : 'none';
-        if (shouldShow) {
-            this.toggleBuildMenu(false); // Ensure other panel is closed
+    updateXpBar(currentXp, xpForNextLevel, level) {
+        const percentage = (currentXp / xpForNextLevel) * 100;
+        if (this.xpBarFill) {
+            this.xpBarFill.style.width = `${percentage}%`;
         }
-    }
-
-    showSaveIndicator() {
-        this.saveIndicatorDiv.classList.add('show');
-        setTimeout(() => {
-            this.saveIndicatorDiv.classList.remove('show');
-        }, 2000);
-    }
-
-    updateData(amount) {
-        this.dataSpan.innerText = amount;
-    }
-
-    updateCode(amount) {
-        this.codeSpan.innerText = amount;
-    }
-
-    updateHealth(amount) {
-        this.healthDiv.innerHTML = `<i class="fas fa-heart"></i> ${amount}`;
-    }
-
-    updateBaseHealth(health, maxHealth) {
-        this.baseHealthDiv.innerHTML = `<i class="fas fa-shield-alt"></i> ${health}`;
-    }
-
-    updateQuest(text) {
-        if (text) {
-            this.questDiv.innerHTML = text;
-            this.showQuest();
-        } else {
-            this.hideQuest();
+        if (this.levelText) {
+            this.levelText.innerText = `Niv. ${level}`;
         }
-    }
-
-    hideQuest() {
-        this.questDiv.style.display = 'none';
-    }
-
-    showQuest() {
-        this.questDiv.style.display = 'block';
-    }
-
-    updateNpcCount(count) {
-        this.npcCountDiv.innerHTML = `<i class="fas fa-users"></i> ${count}`;
-    }
-
-    updateCycle(isDay, timeOfDay, daysSurvived) {
-        this.dayCounterDiv.innerText = `Jour ${daysSurvived}`;
-        this.cycleStatusDiv.innerText = isDay ? 'Jour' : 'Nuit';
-
-        const totalSeconds = Math.floor(timeOfDay / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        this.cycleTimerDiv.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 }
