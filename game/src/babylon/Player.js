@@ -5,7 +5,7 @@ import { Projectile } from './Projectile.js';
 const ANIMATIONS_NAME = {
     IDLE: 'idle',
     RUN: 'run',
-    ATTACK: 'attack'
+    ATTACK: 'punch'
 }
 
 export class Player {
@@ -17,6 +17,9 @@ export class Player {
 
         // The visual mesh that the player sees
         this.mesh = mesh;
+        this.mesh.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
+        this.mesh.rotation = new BABYLON.Vector3(0, Math.PI * 2, 0);
+        this.mesh.getChildMeshes(true).forEach(m => m.checkCollisions = false);
 
         // The invisible collision hitbox
         const hitboxWidth = 0.5;
@@ -30,33 +33,34 @@ export class Player {
 
         // Parent the visual mesh to the hitbox, so it follows automatically
         this.mesh.parent = this.hitbox;
-        this.mesh.position.y = -hitboxHeight / 2;
+        this.mesh.position.y = -0.5;
 
         // Collision groups
         this.hitbox.collisionGroup = COLLISION_GROUPS.PLAYER;
         this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN | COLLISION_GROUPS.WALL | COLLISION_GROUPS.NPC;
 
         // Movement
-        this.walkSpeed = 5; // Adjusted for delta time
+        this.walkSpeed = 5;
         this.keys = { z: false, s: false, q: false, d: false };
         this.inputHandler = this.setupInput();
 
         // Animations
         this.animations = {};
         this.activeAnimation = null;
+        this.activeAnimationName = null;
+        this.isAttacking = false;
         animationGroups.forEach(group => {
             let newName = group.name.toLowerCase();
-            if (group.name.includes('|'))
-                newName = newName.split('|').pop();
-
+            if(group.name.includes('|')) newName = newName.split('|').pop();
+            if(group.name.includes('_')) newName = newName.split('_').pop();
             this.animations[newName] = group;
-            this.animations[newName].stop();
+            group.stop();
         });
 
         // State & Stats
         this.maxHealth = 100;
         this.health = this.maxHealth;
-        this.attackSpeed = 500; // ms per attack
+        this.attackSpeed = 500;
         this.lastAttackTime = 0;
         this.projectileSpeedModifier = 1;
 
@@ -74,14 +78,15 @@ export class Player {
 
         // Initial UI update
         this.game.ui.updateXpBar(this.xp, this.xpForNextLevel, this.level);
+        this.playAnimation(ANIMATIONS_NAME.IDLE);
     }
 
     addXp(amount) {
         this.xp += amount;
+        this.game.ui.updateXpBar(this.xp, this.xpForNextLevel, this.level);
         if (this.xp >= this.xpForNextLevel) {
             this.levelUp();
         }
-        this.game.ui.updateXpBar(this.xp, this.xpForNextLevel, this.level);
     }
 
     levelUp() {
@@ -94,7 +99,7 @@ export class Player {
     }
 
     playAnimation(name, loop = true, speed = 1.0) {
-        if (this.activeAnimation && this.activeAnimation.name === name) return this.activeAnimation;
+        if (this.activeAnimationName === name) return null;
 
         const animation = this.animations[name];
         if (animation) {
@@ -103,7 +108,10 @@ export class Player {
             }
             animation.start(loop, speed, animation.from, animation.to, false);
             this.activeAnimation = animation;
+            this.activeAnimationName = name;
             return animation;
+        } else {
+            console.warn(`Animation not found: ${name}`);
         }
         return null;
     }
@@ -131,19 +139,27 @@ export class Player {
     }
 
     attack() {
+        if (this.isAttacking) return;
         const now = Date.now();
         if (now - this.lastAttackTime < this.attackSpeed) return;
 
         this.lastAttackTime = now;
+        this.isAttacking = true;
 
-        // Create and launch projectile towards the mouse position
         const targetPosition = this.game.mousePositionInWorld.clone();
-        targetPosition.y = this.hitbox.position.y; // Aim straight!
+        targetPosition.y = this.hitbox.position.y;
 
         this.game.addProjectile(new Projectile(this.game, this.hitbox.position.clone(), targetPosition, this.projectileSpeedModifier));
         
-        // Play attack animation
-        // this.playAnimation(ANIMATIONS_NAME.ATTACK, false, 1.5);
+        const anim = this.playAnimation(ANIMATIONS_NAME.ATTACK, false, 1.5);
+        if (anim) {
+            anim.onAnimationEndObservable.addOnce(() => {
+                this.isAttacking = false;
+            });
+        } else {
+            // If no attack animation, reset state after a short delay
+            setTimeout(() => { this.isAttacking = false; }, 300);
+        }
     }
 
     takeDamage(amount) {
@@ -170,10 +186,11 @@ export class Player {
             }
         }
 
-        // --- Movement (World-axis based) --- 
-        if (isMoving) {
-            // this.playAnimation(ANIMATIONS_NAME.RUN);
-
+        // --- Animations & Movement ---
+        if (this.isAttacking) {
+            // Do nothing, let the attack animation play
+        } else if (isMoving) {
+            this.playAnimation(ANIMATIONS_NAME.RUN);
             const direction = new BABYLON.Vector3(0, 0, 0);
             if (this.keys.z) direction.z += 1;
             if (this.keys.s) direction.z -= 1;
@@ -186,7 +203,7 @@ export class Player {
                 this.hitbox.moveWithCollisions(moveVector);
             }
         } else {
-            // this.playAnimation(ANIMATIONS_NAME.IDLE);
+            this.playAnimation(ANIMATIONS_NAME.IDLE);
         }
     }
 

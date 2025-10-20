@@ -78,27 +78,13 @@ export class BabylonGame {
     }
 
     async loadModels() {
-        // No models to load for now, placeholders are created procedurally
-        return Promise.resolve();
-    }
-
-    createPlayerPlaceholder() {
-        const egg = new BABYLON.TransformNode("player-root");
-
-        const body = BABYLON.MeshBuilder.CreateSphere("egg-body", { diameter: 1 }, this.scene);
-        body.scaling = new BABYLON.Vector3(0.7, 1, 0.7);
-        body.position.y = 0.5;
-        const bodyMat = new BABYLON.StandardMaterial("eggMat", this.scene);
-        bodyMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.95); // Off-white
-        bodyMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-        body.material = bodyMat;
-        body.parent = egg;
-
-        // Return the root node and empty animation groups
-        return {
-            mesh: egg,
-            animationGroups: []
+        const result = await BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "Rabbit.glb", this.scene);
+        this.models.player = {
+            mesh: result.meshes[0],
+            animationGroups: result.animationGroups
         };
+        this.models.player.mesh.setEnabled(false);
+        console.log("Player animations:", result.animationGroups.map(ag => ag.name));
     }
 
     createScene() {
@@ -133,11 +119,11 @@ export class BabylonGame {
         this.bugManager = new BugManager(this);
         this.world.init();
 
-        const playerPlaceholder = this.createPlayerPlaceholder();
-        playerPlaceholder.mesh.name = "player";
-        playerPlaceholder.mesh.getChildMeshes().forEach(m => shadowGenerator.addShadowCaster(m, true));
+        const playerMesh = this.models.player.mesh.clone("player");
+        playerMesh.setEnabled(true);
+        playerMesh.getChildMeshes().forEach(m => shadowGenerator.addShadowCaster(m, true));
 
-        this.player = new Player(this, playerPlaceholder.mesh, this.scene, playerPlaceholder.animationGroups);
+        this.player = new Player(this, playerMesh, this.scene, this.models.player.animationGroups);
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
 
         this.camera.setTarget(this.player.hitbox.position);
