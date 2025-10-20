@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? 'https://giovanniscarpellino.github.io/bao' : '/',
+  base: process.env.NODE_ENV === 'production' ? 'https://scarpellino.fr/bao' : '/',
   plugins: [
     viteStaticCopy({
       targets: [
