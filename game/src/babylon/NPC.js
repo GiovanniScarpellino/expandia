@@ -7,18 +7,14 @@ export class NPC {
         this.game = game;
         this.scene = game.scene;
         this.specialization = specialization;
-        this.resourceMap = {
-            'DEV': 'code', // DEV collects code
-        };
 
-        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_CORRUPTED_TILE, CLEANING
+        this.state = 'IDLE'; // IDLE, MOVING_TO_RESOURCE, GATHERING
         this.path = [];
-        this.target = null; // Can be a resource or a tile
+        this.target = null; // Can be a resource mesh
 
         // Config
         this.speed = 1.5; // units per second
         this.gatheringTime = 3; // seconds
-        this.cleaningTime = 2; // seconds
         this.timer = 0;
 
         // Pathfinding & State Timers
@@ -41,47 +37,23 @@ export class NPC {
         this.hitbox.collisionGroup = COLLISION_GROUPS.NPC;
         this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN | COLLISION_GROUPS.WALL;
 
-        // Create visual mesh
-        this.mesh = this.game.models.npc.mesh.clone(`npcMesh-${Math.random()}`);
-        this.mesh.setEnabled(true);
-        this.mesh.parent = this.hitbox; // Parent visual mesh to hitbox
-        this.mesh.position = new BABYLON.Vector3(0, -0.5, 0); // Center visual mesh in hitbox
-        this.mesh.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-        
-        this.game.addShadowCaster(this.hitbox); // Shadow caster should be on the moving part
+        // Create visual mesh (subclasses will override this)
+        this.mesh = null;
 
         // --- Animations ---
         this.animations = {};
         this.activeAnimation = null;
-
-        // Clone animation groups for this specific NPC instance and retarget them
-        this.game.models.npc.animationGroups.forEach(group => {
-            const newGroup = group.clone(group.name + "_npc_" + this.mesh.uniqueId, (oldTarget) => {
-                const newTarget = this.mesh.getDescendants(false, (node) => {
-                    const nameParts = node.name.split('.');
-                    const lastPart = nameParts[nameParts.length - 1];
-                    return lastPart === oldTarget.name;
-                })[0];
-                return newTarget;
-            });
-            this.animations[group.name] = newGroup;
-        });
     }
 
     playAnimation(name, loop = true, speed = 1.0) {
-        if (this.activeAnimation && this.activeAnimation.name.startsWith(name)) {
-            return this.activeAnimation;
-        }
         const animation = this.animations[name];
-        if (animation) {
+        if (animation && this.activeAnimation !== animation) {
             if (this.activeAnimation) {
                 this.activeAnimation.stop();
             }
             animation.start(loop, speed, animation.from, animation.to, false);
             this.activeAnimation = animation;
             return animation;
-        } else {
-            console.warn(`Animation "${name}" not found for NPC.`);
         }
         return null;
     }
@@ -102,38 +74,14 @@ export class NPC {
                 case 'GATHERING':
                     this.handleGatheringState(delta);
                     break;
-                case 'MOVING_TO_CORRUPTED_TILE':
-                    this.handleMoveState(delta, 'CLEANING');
-                    break;
-                case 'CLEANING':
-                    this.handleCleaningState(delta);
-                    break;
             }
         }
         this.hitbox.moveWithCollisions(new BABYLON.Vector3(0, -0.1, 0));
     }
 
+    // This method should be overridden by subclasses
     handleIdleState() {
-        if (this.specialization === 'DEV') {
-            const result = this.findClosestReachableResource();
-            if (result) {
-                this.target = result.resource;
-                this.path = result.path;
-                this.target.mesh.metadata.isTargeted = true;
-                this.state = 'MOVING_TO_RESOURCE';
-            }
-        } else if (this.specialization === 'TECH') {
-            const tile = this.game.world.getClosestCorruptedTile(this.hitbox.position);
-            if (tile) {
-                const path = Pathfinder.findPath(this.game.world, this.hitbox.position, tile.position);
-                if (path && path.length > 0) {
-                    this.target = tile;
-                    this.path = path;
-                    this.state = 'MOVING_TO_CORRUPTED_TILE';
-                }
-            }
-        }
-        this.idleSearchTimer = 0; // Reset timer after a search attempt
+        // Generic NPC does nothing in idle state
     }
 
     handleMoveState(delta, nextState) {
@@ -144,7 +92,7 @@ export class NPC {
         if (this.stuckTimer >= this.stuckCheckInterval) {
             const distanceMoved = BABYLON.Vector3.Distance(this.lastPosition, this.hitbox.position);
             if (distanceMoved < 0.1) { // Moved less than 10cm in 1 second
-                if (this.target && this.target.mesh) {
+                if (this.target && this.target.mesh && this.target.mesh.metadata) {
                     this.target.mesh.metadata.isTargeted = false; // Release the target resource
                 }
                 this.target = null;
@@ -170,9 +118,10 @@ export class NPC {
         const direction = targetPosition.subtract(this.hitbox.position);
         const distance = direction.length();
 
-        if (distance <= 0.1) {
+        if (distance <= 1.0) { // Increased threshold
             this.path.shift();
-        } else {
+        }
+        else {
             this.hitbox.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, Math.atan2(direction.x, direction.z) + Math.PI, 0);
             const moveVector = direction.normalize().scale(this.speed * delta);
             this.hitbox.moveWithCollisions(moveVector);
@@ -184,7 +133,7 @@ export class NPC {
     }
 
     handleGatheringState(delta) {
-        this.playAnimation('idle');
+        this.playAnimation('gathering');
         this.timer += delta;
         if (this.timer >= this.gatheringTime) {
             this.timer = 0;
@@ -203,40 +152,16 @@ export class NPC {
 
     finishGathering() {
         if (this.target) {
-            const resourceType = this.game.resourceManager.harvestResource(this.target);
+            const resourceType = this.game.resourceManager.harvestResource(this.target.mesh);
             if (resourceType) {
                 this.game.addResource(resourceType, 1);
+            }
+            if (this.target.mesh.metadata) {
+                this.target.mesh.metadata.isTargeted = false;
             }
             this.target = null;
         }
         // After gathering, immediately go back to idle to find a new resource
-        this.state = 'IDLE';
-        this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
-    }
-
-    handleCleaningState(delta) {
-        this.playAnimation('idle');
-        this.timer += delta;
-        if (this.timer >= this.cleaningTime) {
-            this.timer = 0;
-            if (this.target) {
-                const anim = this.playAnimation('pick-up', false); // Reuse pick-up animation
-                if (anim) {
-                    anim.onAnimationEndObservable.addOnce(() => this.finishCleaning());
-                } else {
-                    this.finishCleaning();
-                }
-            } else {
-                this.state = 'IDLE';
-            }
-        }
-    }
-
-    finishCleaning() {
-        if (this.target) {
-            this.game.world.cleanTile(this.target);
-            this.target = null;
-        }
         this.state = 'IDLE';
         this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
     }
@@ -249,7 +174,7 @@ export class NPC {
         }
 
         const availableResources = this.game.resourceManager.resources.filter(
-            r => r.type === targetType && r.mesh.isEnabled() && !r.mesh.metadata.isTargeted
+            r => r.type === targetType && r.mesh.isEnabled() && (!r.mesh.metadata || !r.mesh.metadata.isTargeted)
         );
     
         availableResources.sort((a, b) => {
@@ -260,7 +185,7 @@ export class NPC {
     
         for (const resource of availableResources) {
             const path = Pathfinder.findPath(this.game.world, this.hitbox.position, resource.mesh.position);
-            if (path.length > 0) {
+            if (path && path.length > 0) {
                 return { resource, path }; 
             }
         }

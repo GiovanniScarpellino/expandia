@@ -27,9 +27,9 @@ export class Player {
         this.hitbox = BABYLON.MeshBuilder.CreateBox("playerHitbox", { width: hitboxWidth, height: hitboxHeight, depth: hitboxDepth }, scene);
         this.hitbox.position = new BABYLON.Vector3(0, hitboxHeight / 2, 0);
         this.hitbox.checkCollisions = true;
-        this.hitbox.ellipsoid = new BABYLON.Vector3(hitboxWidth / 2, hitboxHeight / 2, hitboxDepth / 2);
+        this.hitbox.ellipsoid = new BABYLON.Vector3(hitboxWidth / 4, hitboxHeight / 2, hitboxDepth / 4);
         this.hitbox.isVisible = false;
-        this.hitbox.applyGravity = true; // Use scene's gravity
+        this.hitbox.applyGravity = false; // We will handle gravity manually
 
         // Parent the visual mesh to the hitbox, so it follows automatically
         this.mesh.parent = this.hitbox;
@@ -41,8 +41,9 @@ export class Player {
 
         // Movement
         this.walkSpeed = 5;
-        this.keys = { z: false, s: false, q: false, d: false };
+        this.keys = { z: false, s: false, q: false, d: false, e: false };
         this.inputHandler = this.setupInput();
+        this._verticalVelocity = 0;
 
         // Animations
         this.animations = {};
@@ -63,6 +64,10 @@ export class Player {
         this.attackSpeed = 500;
         this.lastAttackTime = 0;
         this.projectileSpeedModifier = 1;
+        this.canCollect = false;
+        this.nearbyResource = null;
+        this.canUnlock = false;
+        this.nearbyUnlockableTile = null;
 
         // Progression
         this.level = 1;
@@ -120,6 +125,15 @@ export class Player {
         const keydown = (e) => {
             const key = e.key.toLowerCase();
             if (key in this.keys) this.keys[key] = true;
+
+            if (key === 'e') {
+                if (this.canUnlock && this.nearbyUnlockableTile) {
+                    const { x, z } = this.nearbyUnlockableTile.metadata;
+                    this.game.world.unlockTile(x, z, true);
+                } else if (this.canCollect && this.nearbyResource) {
+                    this.harvest(this.nearbyResource);
+                }
+            }
         };
 
         const keyup = (e) => {
@@ -162,6 +176,13 @@ export class Player {
         }
     }
 
+    harvest(resourceMesh) {
+        const resourceType = this.game.resourceManager.harvestResource(resourceMesh);
+        if (resourceType) {
+            this.game.addResource(resourceType, 1);
+        }
+    }
+
     takeDamage(amount) {
         this.health -= amount;
         this.game.ui.updateHealth(this.health, this.maxHealth);
@@ -175,6 +196,10 @@ export class Player {
 
     update(delta) {
         const isMoving = this.keys.z || this.keys.s || this.keys.q || this.keys.d;
+
+        // --- Gravity ---
+        this._verticalVelocity += this.scene.gravity.y * delta;
+        const moveVector = new BABYLON.Vector3(0, this._verticalVelocity, 0);
 
         // --- Rotation --- 
         const mousePosition = this.game.mousePositionInWorld;
@@ -199,11 +224,100 @@ export class Player {
 
             if (direction.lengthSquared() > 0) {
                 direction.normalize();
-                const moveVector = direction.scale(this.walkSpeed * delta);
-                this.hitbox.moveWithCollisions(moveVector);
+                const horizontalMove = direction.scale(this.walkSpeed * delta);
+
+                // Check if the next position is on a valid (unlocked) tile
+                const nextPosition = this.hitbox.position.add(horizontalMove);
+                if (this.game.world.canMoveTo(nextPosition)) {
+                    moveVector.x = horizontalMove.x;
+                    moveVector.z = horizontalMove.z;
+                } else {
+                    // To avoid getting stuck on corners, try moving along one axis at a time
+                    const nextPositionX = this.hitbox.position.add(new BABYLON.Vector3(horizontalMove.x, 0, 0));
+                    if (this.game.world.canMoveTo(nextPositionX)) {
+                        moveVector.x = horizontalMove.x;
+                    }
+                    const nextPositionZ = this.hitbox.position.add(new BABYLON.Vector3(0, 0, horizontalMove.z));
+                    if (this.game.world.canMoveTo(nextPositionZ)) {
+                        moveVector.z = horizontalMove.z;
+                    }
+                }
             }
         } else {
             this.playAnimation(ANIMATIONS_NAME.IDLE);
+        }
+
+        this.hitbox.moveWithCollisions(moveVector);
+
+        if (this.hitbox.position.y < 0.5) {
+            this.hitbox.position.y = 0.5;
+            this._verticalVelocity = 0;
+        }
+
+        // --- Interaction Detection ---
+        if (this.game.gameMode === 'EXPLORATION') {
+            this.updateInteractionHighlights();
+        }
+    }
+
+    updateInteractionHighlights() {
+        const playerPos = this.hitbox.position;
+
+        // --- Resource Detection ---
+        let closestResource = null;
+        let minResourceDist = 2;
+        this.game.resourceManager.resources.forEach(resource => {
+            if (resource.mesh.isEnabled()) {
+                const distance = BABYLON.Vector3.Distance(playerPos, resource.mesh.position);
+                if (distance < minResourceDist) {
+                    minResourceDist = distance;
+                    closestResource = resource.mesh;
+                }
+            }
+        });
+
+        // --- Tile Unlock Detection ---
+        let closestUnlockableTile = null;
+        let minTileDist = 1.5; // Player must be quite close to unlock
+        const playerTileCoords = this.game.world.getTileCoordinates(playerPos);
+        const neighbors = [{ dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 }];
+        neighbors.forEach(n => {
+            const key = this.game.world.getTileKey(playerTileCoords.x + n.dx, playerTileCoords.z + n.dz);
+            const tile = this.game.world.tiles[key];
+            if (tile && !tile.metadata.unlocked) {
+                const distance = BABYLON.Vector3.Distance(playerPos, tile.position);
+                if (distance < minTileDist) {
+                    minTileDist = distance;
+                    closestUnlockableTile = tile;
+                }
+            }
+        });
+
+        // --- Update State and Highlights ---
+        // Clear previous highlights first
+        if (this.nearbyResource) this.game.highlightLayer.removeMesh(this.nearbyResource);
+        if (this.nearbyUnlockableTile) this.game.highlightLayer.removeMesh(this.nearbyUnlockableTile);
+
+        // Prioritize tile unlocking over resource gathering if both are in range
+        if (closestUnlockableTile) {
+            this.canUnlock = true;
+            this.nearbyUnlockableTile = closestUnlockableTile;
+            this.game.highlightLayer.addMesh(this.nearbyUnlockableTile, BABYLON.Color3.Green());
+
+            this.canCollect = false;
+            this.nearbyResource = null;
+        } else if (closestResource) {
+            this.canCollect = true;
+            this.nearbyResource = closestResource;
+            this.game.highlightLayer.addMesh(this.nearbyResource, BABYLON.Color3.Yellow());
+
+            this.canUnlock = false;
+            this.nearbyUnlockableTile = null;
+        } else {
+            this.canCollect = false;
+            this.nearbyResource = null;
+            this.canUnlock = false;
+            this.nearbyUnlockableTile = null;
         }
     }
 

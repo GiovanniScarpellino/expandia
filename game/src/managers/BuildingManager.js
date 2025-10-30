@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { Wall } from '../babylon/Wall.js';
-import { Lamppost } from '../babylon/Lamppost.js';
+import { LumberjackChick } from '../babylon/LumberjackChick.js';
 
 export class BuildingManager {
     constructor(game) {
@@ -13,6 +13,7 @@ export class BuildingManager {
         this.currentItemType = null;
         this.canPlace = false;
         this.buildings = []; // Keep track of all buildings
+        this.chicks = []; // Keep track of all chicks
 
         // Ghost Mesh
         this.ghostMesh = null;
@@ -21,8 +22,25 @@ export class BuildingManager {
         // Costs
         this.itemCosts = {
             wall: { wood: 5, stone: 0 },
-            lamppost: { wood: 5, stone: 2 }
+            lumberjackChick: { wood: 10, stone: 0 }
         };
+    }
+
+    createChick(chickType, position) {
+        const cost = this.itemCosts[chickType];
+        if (this.game.wood < cost.wood || this.game.stone < cost.stone) {
+            console.log("Not enough resources to create a chick.");
+            return;
+        }
+
+        this.game.addResource('tree', -cost.wood);
+        this.game.addResource('rock', -cost.stone);
+
+        if (chickType === 'lumberjackChick') {
+            const newChick = new LumberjackChick(this.game, position);
+            this.chicks.push(newChick);
+            console.log("A new lumberjack chick has been created!");
+        }
     }
 
     dispose() {
@@ -111,13 +129,9 @@ export class BuildingManager {
                     this.game.world.blockedEdges.add(edgeKey);
                 }
 
-            } else if (this.currentItemType === 'lamppost') {
-                const groundPosition = this.ghostMesh.position.clone();
-                groundPosition.y = 0; // The lamppost constructor expects a ground-level position
-                const newLamppost = new Lamppost(this.scene, groundPosition);
-                this.game.world.lampposts.push(newLamppost);
-                this.game.cycleManager.addLamppost(newLamppost);
-                // Note: Lamppost creates its own meshes, we might want to add them to shadow casters if needed
+            } else if (this.currentItemType === 'lumberjackChick') {
+                const newChick = new LumberjackChick(this.game, this.ghostMesh.position.clone());
+                this.chicks.push(newChick);
             }
             
             console.log(`${this.currentItemType} placed.`);
@@ -155,9 +169,8 @@ export class BuildingManager {
 
         if (itemType === 'wall') {
             this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
-        } else if (itemType === 'lamppost') {
-            this.ghostMesh = BABYLON.MeshBuilder.CreateCylinder("ghostLamppost", { height: 1.5, diameter: 0.1 }, this.scene);
-            this.ghostMesh.position.y = 0.75;
+        } else if (itemType === 'lumberjackChick') {
+            this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostChick", { width: 0.5, height: 1, depth: 0.5 }, this.scene);
         }
         
         if (this.ghostMesh) {
@@ -186,8 +199,8 @@ export class BuildingManager {
             
             if (this.currentItemType === 'wall') {
                 this.updateWallGhost(pickPoint);
-            } else if (this.currentItemType === 'lamppost') {
-                this.updateLamppostGhost(pickPoint);
+            } else if (this.currentItemType === 'lumberjackChick') {
+                this.updateChickGhost(pickPoint);
             }
         } else {
             this.canPlace = false;
@@ -240,7 +253,7 @@ export class BuildingManager {
         }
     }
 
-    updateLamppostGhost(pickPoint) {
+    updateChickGhost(pickPoint) {
         const { x, z } = this.game.world.getTileCoordinates(pickPoint);
         const key = this.game.world.getTileKey(x, z);
         const tile = this.game.world.tiles[key];
@@ -251,7 +264,6 @@ export class BuildingManager {
             this.canPlace = true;
             this.ghostMesh.material.emissiveColor = BABYLON.Color3.Green();
         } else {
-            // Follow the mouse but show it's not placeable
             this.ghostMesh.position.x = pickPoint.x;
             this.ghostMesh.position.z = pickPoint.z;
             this.canPlace = false;

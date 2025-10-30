@@ -18,13 +18,49 @@ export class World {
     }
 
     init() {
-        const platformRadius = 5; // Creates an 11x11 platform
-
-        for (let x = -platformRadius; x <= platformRadius; x++) {
-            for (let z = -platformRadius; z <= platformRadius; z++) {
-                this.createTile(x, z, true); // Create all tiles as unlocked
+        // Create a small 3x3 starting area
+        for (let x = -1; x <= 1; x++) {
+            for (let z = -1; z <= 1; z++) {
+                this.unlockTile(x, z, false); // Unlock initial tiles without cost
             }
         }
+    }
+
+    unlockTile(x, z, withCost = true) {
+        const key = this.getTileKey(x, z);
+        const tile = this.tiles[key];
+
+        if (tile && tile.metadata.unlocked) {
+            return; // Already unlocked
+        }
+
+        if (withCost) {
+            const cost = 5; // Lowered initial cost
+            if (this.game.wood < cost) {
+                console.log("Not enough wood to unlock tile!");
+                return; // Not enough resources
+            }
+            this.game.addResource('tree', -cost);
+        }
+
+        // If tile doesn't exist, create it. If it exists but is locked, get it.
+        const targetTile = this.createTile(x, z, true); // Create/update the tile as unlocked
+
+        // Create locked neighbors
+        this.createNeighboringLockedTiles(x, z);
+
+        // Trigger combat encounter
+        if (withCost && Math.random() < 0.25) { // 25% chance to trigger combat on unlock
+            console.log("An enemy encounter has been triggered!");
+            this.game.startCombat();
+        }
+    }
+
+    createNeighboringLockedTiles(x, z) {
+        const neighbors = [{ dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 }];
+        neighbors.forEach(n => {
+            this.createTile(x + n.dx, z + n.dz, false); // Creates a locked tile if it doesn't exist
+        });
     }
 
     getTileKey(x, z) {
@@ -61,6 +97,11 @@ export class World {
     createTile(x, z, unlocked = false) {
         const key = this.getTileKey(x, z);
         if (this.tiles[key]) {
+            // If we're trying to unlock an existing locked tile
+            if (unlocked && !this.tiles[key].metadata.unlocked) {
+                this.tiles[key].material = this.unlockedMaterial;
+                this.tiles[key].metadata.unlocked = true;
+            }
             return this.tiles[key];
         }
 
@@ -74,7 +115,7 @@ export class World {
         tile.collisionGroup = COLLISION_GROUPS.TERRAIN;
         tile.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
 
-        tile.metadata = { unlocked, x, z };
+        tile.metadata = { type: 'tile', unlocked, x, z };
         this.tiles[key] = tile;
 
         return tile;

@@ -1,81 +1,96 @@
+import * as BABYLON from '@babylonjs/core';
 import { Bug } from '../babylon/Bug.js';
-import { Watchtower } from '../babylon/Watchtower.js';
 
 export class EnemyManager {
     constructor(game) {
         this.game = game;
+        this.scene = game.scene;
         this.enemies = [];
         this.waveNumber = 0;
-        this.timeBetweenWaves = 5000; // 5 seconds
-        this.nextWaveTime = 0;
-        this.isWaveInProgress = false;
+        this.enemiesPerWave = 5;
+        this.spawnRadius = 20;
+        this.timeBetweenWaves = 3000; // 3 seconds
+        this.waveTimer = 0;
+        this.isWaveActive = false;
+        this.arenaCenter = null;
     }
 
-    start() {
-        // Start the first wave almost immediately
-        this.nextWaveTime = Date.now() + 1000;
-        this.game.ui.updateWaveStats(this.waveNumber, 0);
+    start(arenaCenter) {
+        this.arenaCenter = arenaCenter;
+        this.waveNumber = 1;
+        this.isWaveActive = false; // Will be set to true by the first wave spawn
+        this.waveTimer = this.timeBetweenWaves; // Start first wave almost immediately
+        console.log("EnemyManager started for arena combat.");
+    }
+
+    stop() {
+        // Despawn all enemies
+        this.enemies.forEach(enemy => enemy.dispose());
+        this.enemies = [];
+        this.waveNumber = 0;
+        this.isWaveActive = false;
+        this.arenaCenter = null;
+        console.log("EnemyManager stopped.");
     }
 
     update(delta) {
+        if (!this.arenaCenter) return; // Don't run if combat isn't active
+
         // Update all active enemies
-        for (const enemy of this.enemies) {
-            enemy.update(delta);
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            if (this.enemies[i].isDisposed) {
+                this.enemies.splice(i, 1);
+            } else {
+                this.enemies[i].update(delta);
+            }
         }
 
-        // Check for wave completion
-        if (this.isWaveInProgress && this.enemies.length === 0) {
-            this.isWaveInProgress = false;
-            this.nextWaveTime = Date.now() + this.timeBetweenWaves;
-            console.log(`Wave ${this.waveNumber} cleared! Next wave in ${this.timeBetweenWaves / 1000}s.`);
-        }
-
-        // Check if it's time to spawn a new wave
-        if (!this.isWaveInProgress && Date.now() >= this.nextWaveTime) {
+        // If a wave is active and all enemies are defeated, prepare for the next wave
+        if (this.isWaveActive && this.enemies.length === 0) {
+            this.isWaveActive = false;
+            this.waveTimer = 0;
             this.waveNumber++;
-            this.spawnWave();
-            this.isWaveInProgress = true;
+            // For now, let's say combat ends after 3 waves
+            if (this.waveNumber > 3) {
+                this.game.endCombat();
+                return;
+            }
         }
 
-        // Update UI
-        this.game.ui.updateWaveStats(this.waveNumber, this.enemies.length);
+        // If no wave is active, count down to the next one
+        if (!this.isWaveActive) {
+            this.waveTimer += delta * 1000;
+            if (this.waveTimer >= this.timeBetweenWaves) {
+                this.spawnWave();
+            }
+        }
     }
 
     spawnWave() {
-        const bugCount = 2 + this.waveNumber;
-        const watchtowerCount = Math.floor(this.waveNumber / 2);
+        console.log(`Spawning Wave ${this.waveNumber}`);
+        this.isWaveActive = true;
+        const enemiesToSpawn = this.enemiesPerWave + (this.waveNumber - 1) * 2; // Increase enemies per wave
 
-        console.log(`Spawning wave ${this.waveNumber} with ${bugCount} bug(s) and ${watchtowerCount} watchtower(s)...`);
-        
-        const spawnPoints = this.game.world.getSpawnPoints(bugCount + watchtowerCount);
-        if (spawnPoints.length === 0) {
-            console.warn("EnemyManager: No valid spawn points found.");
-            return;
+        for (let i = 0; i < enemiesToSpawn; i++) {
+            const angle = (i / enemiesToSpawn) * Math.PI * 2;
+            const x = this.arenaCenter.x + Math.cos(angle) * this.spawnRadius;
+            const z = this.arenaCenter.z + Math.sin(angle) * this.spawnRadius;
+            const spawnPoint = new BABYLON.Vector3(x, 0.5, z);
+            this.spawnEnemy(spawnPoint);
         }
-
-        // Spawn Bugs
-        for (let i = 0; i < bugCount; i++) {
-            const spawnPoint = spawnPoints.pop();
-            if (spawnPoint) {
-                const bug = new Bug(this.game, spawnPoint);
-                this.enemies.push(bug);
-            }
-        }
-
-        // Spawn Watchtowers
-        for (let i = 0; i < watchtowerCount; i++) {
-            const spawnPoint = spawnPoints.pop();
-            if (spawnPoint) {
-                const tower = new Watchtower(this.game, spawnPoint);
-                this.enemies.push(tower);
-            }
-        }
+        this.game.ui.updateWaveStats(this.waveNumber, enemiesToSpawn);
     }
 
-    removeEnemy(enemyToRemove) {
-        const index = this.enemies.findIndex(enemy => enemy === enemyToRemove);
-        if (index !== -1) {
+    spawnEnemy(position) {
+        const newEnemy = new Bug(this.game, position);
+        this.enemies.push(newEnemy);
+    }
+
+    removeEnemy(enemy) {
+        const index = this.enemies.indexOf(enemy);
+        if (index > -1) {
             this.enemies.splice(index, 1);
+            this.game.ui.updateWaveStats(this.waveNumber, this.enemies.length);
         }
     }
 }

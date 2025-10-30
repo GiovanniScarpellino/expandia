@@ -8,7 +8,12 @@ export class UI {
         this.xpBarFill = document.querySelector('#xp-bar-fill');
         this.levelText = document.querySelector('#level-text');
 
+        // Resource elements
+        this.woodCounter = document.getElementById('wood-counter');
+        this.stoneCounter = document.getElementById('stone-counter');
+
         // Wave stats elements
+        this.waveStats = document.getElementById('wave-stats');
         this.waveCounter = document.getElementById('wave-counter');
         this.enemyCounter = document.getElementById('enemy-counter');
 
@@ -18,10 +23,32 @@ export class UI {
         this.levelUpScreen = document.getElementById('levelup-screen');
         this.upgradeCardsContainer = document.getElementById('upgrade-cards-container');
 
+        // Debug controls
+        this.animationSelect = document.getElementById('animation-select');
+        this.animationSelect.addEventListener('change', (e) => {
+            console.log("Animation selected:", e.target.value);
+            const chick = this.game.buildingManager.chicks[this.game.buildingManager.chicks.length - 1];
+            if (chick) {
+                chick.playAnimation(e.target.value, true);
+            }
+        });
+
         // Initial state
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
+        this.updateResources(0, 0);
+        this.waveStats.style.display = 'none';
+    }
+
+    populateAnimationSelect(animationNames) {
+        this.animationSelect.innerHTML = '';
+        animationNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.innerText = name;
+            this.animationSelect.appendChild(option);
+        });
     }
 
     togglePauseScreen(show) {
@@ -75,11 +102,25 @@ export class UI {
     }
 
     updateWaveStats(waveNumber, remainingEnemies) {
-        if (this.waveCounter) {
-            this.waveCounter.innerText = `Manche: ${waveNumber}`;
+        if (this.game.gameMode === 'COMBAT') {
+            this.waveStats.style.display = 'block';
+            if (this.waveCounter) {
+                this.waveCounter.innerText = `Manche: ${waveNumber}`;
+            }
+            if (this.enemyCounter) {
+                this.enemyCounter.innerText = `Ennemis: ${remainingEnemies}`;
+            }
+        } else {
+            this.waveStats.style.display = 'none';
         }
-        if (this.enemyCounter) {
-            this.enemyCounter.innerText = `Ennemis: ${remainingEnemies}`;
+    }
+
+    updateResources(wood, stone) {
+        if (this.woodCounter) {
+            this.woodCounter.innerText = `Bois: ${wood}`;
+        }
+        if (this.stoneCounter) {
+            this.stoneCounter.innerText = `Pierre: ${stone}`;
         }
     }
 }

@@ -3,6 +3,8 @@ import '@babylonjs/loaders/glTF';
 import { Player } from './babylon/Player.js';
 import { World } from './babylon/World.js';
 import { EnemyManager } from './managers/EnemyManager.js';
+import { ResourceManager } from './managers/ResourceManager.js';
+import { BuildingManager } from './managers/BuildingManager.js';
 import { UI } from './UI.js';
 
 // Collision Groups
@@ -23,6 +25,8 @@ export class BabylonGame {
         this.player = null;
         this.world = null;
         this.enemyManager = null;
+        this.resourceManager = null;
+        this.buildingManager = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
@@ -32,9 +36,18 @@ export class BabylonGame {
         this.projectiles = [];
         this.enemyProjectiles = [];
         this.gameState = 'RUNNING'; // RUNNING, PAUSED, GAMEOVER, LEVELUP
+        this.gameMode = 'EXPLORATION'; // EXPLORATION, COMBAT
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
+        // Player Resources
+        this.wood = 20;
+        this.stone = 0;
+
         this.ui = new UI(this);
+
+        // Combat Arena
+        this.arenaCenter = new BABYLON.Vector3(1000, 0, 1000);
+        this.playerReturnPosition = null;
 
         // Upgrade Pool
         this.upgradePool = [
@@ -80,12 +93,41 @@ export class BabylonGame {
     }
 
     async loadModels() {
-        const result = await BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "Rabbit.glb", this.scene);
+        const rabbitPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "Rabbit.glb", this.scene);
+        const treePromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "tree.glb", this.scene);
+        const rockPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "rock-small.glb", this.scene);
+        const chickPromise = BABYLON.SceneLoader.LoadAssetContainerAsync("./src/models/", "Chicken_Guy.glb", this.scene);
+        const npcPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "character-l.glb", this.scene);
+
+        const [rabbitResult, treeResult, rockResult, chickContainer, npcResult] = await Promise.all([rabbitPromise, treePromise, rockPromise, chickPromise, npcPromise]);
+
         this.models.player = {
-            mesh: result.meshes[0],
-            animationGroups: result.animationGroups
+            mesh: rabbitResult.meshes[0],
+            animationGroups: rabbitResult.animationGroups
         };
         this.models.player.mesh.setEnabled(false);
+
+        this.models.tree = {
+            mesh: treeResult.meshes[0],
+            animationGroups: treeResult.animationGroups
+        };
+        this.models.tree.mesh.setEnabled(false);
+
+        this.models.rock = {
+            mesh: rockResult.meshes[0],
+            animationGroups: rockResult.animationGroups
+        };
+        this.models.rock.mesh.setEnabled(false);
+
+        // Store the container for chicks. All assets will be instantiated from this.
+        this.models.chick = chickContainer;
+        this.models.chick.removeAllFromScene(); // Don't show the template mesh
+
+        this.models.npc = {
+            mesh: npcResult.meshes[0],
+            animationGroups: npcResult.animationGroups
+        };
+        this.models.npc.mesh.setEnabled(false);
     }
 
     createYolkSplatMaterial() {
@@ -146,17 +188,44 @@ export class BabylonGame {
         shadowGenerator.blurKernel = 64;
         shadowGenerator.darkness = 0.3;
 
-        // Create a large, invisible ground plane for mouse picking
+        // Create a large, invisible ground plane for mouse picking in the main world
         const ground = BABYLON.MeshBuilder.CreateGround("mouseGround", { width: 1000, height: 1000 }, this.scene);
         ground.material = new BABYLON.StandardMaterial("groundMat", this.scene);
         ground.material.alpha = 0; // Make it invisible
-        ground.checkCollisions = false; // Player should not collide with it
-        ground.collisionGroup = COLLISION_GROUPS.GROUND;
+        ground.checkCollisions = false;
         ground.isPickable = true;
 
         this.world = new World(this, this.scene);
-        this.enemyManager = new EnemyManager(this);
+
+        // Create the combat arena using the world tile system
+        const arenaRadius = 4; // Creates a 9x9 area
+        const arenaTileOffset = { x: 500, z: 500 }; // Use a large offset for tile coordinates
+        for (let x = -arenaRadius - 1; x <= arenaRadius + 1; x++) {
+            for (let z = -arenaRadius - 1; z <= arenaRadius + 1; z++) {
+                const isUnlocked = Math.abs(x) <= arenaRadius && Math.abs(z) <= arenaRadius;
+                const tile = this.world.createTile(arenaTileOffset.x + x, arenaTileOffset.z + z, isUnlocked);
+                // Make arena floor pickable for player rotation
+                if(isUnlocked) {
+                    tile.name = "arenaGround";
+                }
+            }
+        }
+        // Adjust arena center to world coordinates for teleportation
+        this.arenaCenter = new BABYLON.Vector3(arenaTileOffset.x * this.world.tileSize, 0, arenaTileOffset.z * this.world.tileSize);
+
         this.world.init();
+
+        this.resourceManager = new ResourceManager(this);
+        const resourceData = [
+            { type: 'tree', x: 8, z: 8 },
+            { type: 'tree', x: -8, z: 8 },
+            { type: 'rock', x: 8, z: -8 },
+            { type: 'rock', x: -8, z: -8 },
+        ];
+        this.resourceManager.initialize(resourceData);
+
+        this.enemyManager = new EnemyManager(this);
+        this.buildingManager = new BuildingManager(this);
 
         const playerMesh = this.models.player.mesh.clone("player");
         playerMesh.setEnabled(true);
@@ -164,16 +233,19 @@ export class BabylonGame {
 
         this.player = new Player(this, playerMesh, this.scene, this.models.player.animationGroups);
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
+        this.ui.updateResources(this.wood, this.stone);
 
         this.camera.setTarget(this.player.hitbox.position);
 
         // Post-processing
+        /*
         const pipeline = new BABYLON.DefaultRenderingPipeline("defaultPipeline", true, this.scene, [this.camera]);
         pipeline.samples = 4;
         pipeline.bloomEnabled = true;
         pipeline.bloomThreshold = 0.8;
         pipeline.bloomWeight = 0.3;
         pipeline.fxaaEnabled = true;
+        */
     }
 
     setupCameraControls() {
@@ -190,11 +262,12 @@ export class BabylonGame {
         // Mouse input
         this.scene.onPointerObservable.add((pointerInfo) => {
             if (this.gameState !== 'RUNNING') return;
+
             switch (pointerInfo.type) {
                 case BABYLON.PointerEventTypes.POINTERMOVE:
-                    const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.collisionGroup === COLLISION_GROUPS.GROUND);
-                    if (pickResult.hit) {
-                        this.mousePositionInWorld = pickResult.pickedPoint;
+                    const pickResultMove = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
+                    if (pickResultMove.hit) {
+                        this.mousePositionInWorld = pickResultMove.pickedPoint;
                     }
                     break;
                 case BABYLON.PointerEventTypes.POINTERDOWN:
@@ -210,7 +283,61 @@ export class BabylonGame {
             if (e.key === 'Escape') {
                 this.togglePause();
             }
+            if (e.key === 'c') {
+                const spawnPosition = this.player.hitbox.position.clone();
+                const backward = this.player.hitbox.getDirection(new BABYLON.Vector3(0, 0, -1));
+                spawnPosition.addInPlace(backward.scale(2));
+                this.buildingManager.createChick('lumberjackChick', spawnPosition);
+                const chick = this.buildingManager.chicks[this.buildingManager.chicks.length - 1];
+                if (chick) {
+                    this.ui.populateAnimationSelect(Object.keys(chick.animations));
+                }
+            }
+            if (e.key === 'p') {
+                this.startCombat();
+            }
+
+            // Debug controls
+            const chick = this.buildingManager.chicks[this.buildingManager.chicks.length - 1];
+            if (chick) {
+                if (e.key === 'ArrowLeft') {
+                    chick.hitbox.rotation.y -= 0.1;
+                    console.log(`Chick hitbox rotation y: ${chick.hitbox.rotation.y}`);
+                }
+                if (e.key === 'ArrowRight') {
+                    chick.hitbox.rotation.y += 0.1;
+                    console.log(`Chick hitbox rotation y: ${chick.hitbox.rotation.y}`);
+                }
+            }
         });
+    }
+
+    startCombat() {
+        if (this.gameMode === 'COMBAT') return;
+        console.log("Starting combat...");
+
+        // Save player's current position and teleport to arena
+        this.playerReturnPosition = this.player.hitbox.position.clone();
+        this.player.hitbox.position = this.arenaCenter.add(new BABYLON.Vector3(0, 0.5, 0));
+
+        this.gameMode = 'COMBAT';
+        this.enemyManager.start(this.arenaCenter);
+        this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
+    }
+
+    endCombat() {
+        if (this.gameMode !== 'COMBAT') return;
+        console.log("Ending combat...");
+
+        // Teleport player back to their original position
+        if (this.playerReturnPosition) {
+            this.player.hitbox.position = this.playerReturnPosition;
+        }
+        this.playerReturnPosition = null;
+
+        this.gameMode = 'EXPLORATION';
+        // Clean up any remaining enemies, etc.
+        this.enemyManager.stop();
     }
 
     togglePause() {
@@ -244,6 +371,16 @@ export class BabylonGame {
         this.ui.hideLevelUpScreen();
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
         this.gameState = 'RUNNING';
+    }
+
+    addResource(type, amount) {
+        if (type === 'tree') {
+            this.wood += amount;
+        }
+        else if (type === 'rock') {
+            this.stone += amount;
+        }
+        this.ui.updateResources(this.wood, this.stone);
     }
 
     addShadowCaster(mesh) {
@@ -289,8 +426,6 @@ export class BabylonGame {
             return;
         }
 
-        this.enemyManager.start();
-
         this.engine.runRenderLoop(() => {
             if (this.gameState === 'RUNNING') {
                 const delta = this.engine.getDeltaTime() / 1000;
@@ -305,7 +440,10 @@ export class BabylonGame {
                     }
                 }
 
-                this.enemyManager.update(delta);
+                if (this.gameMode === 'COMBAT') {
+                    this.enemyManager.update(delta);
+                }
+                this.resourceManager.update(delta);
 
                 for (let i = this.projectiles.length - 1; i >= 0; i--) {
                     this.projectiles[i].update(delta);
@@ -314,6 +452,10 @@ export class BabylonGame {
                 for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
                     this.enemyProjectiles[i].update(delta);
                 }
+
+                this.buildingManager.chicks.forEach(chick => {
+                    chick.update(delta);
+                });
             }
             
             this.scene.render();
