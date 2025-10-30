@@ -24,6 +24,21 @@ export class ResourceManager {
     }
 
     spawnResource(position, type = null) {
+        const random = Math.random();
+        if (random < 0.25) {
+            // 25% chance to spawn a grave
+            const graveMesh = BABYLON.MeshBuilder.CreateBox("grave", {width: 1, height: 2, depth: 0.5}, this.scene);
+            graveMesh.position = position.clone();
+            graveMesh.position.y = 1;
+            const graveMaterial = new BABYLON.StandardMaterial("graveMat", this.scene);
+            graveMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.8); // A purplish color
+            graveMesh.material = graveMaterial;
+            graveMesh.metadata = { type: 'grave' };
+            this.game.graves.push(graveMesh);
+            this.game.addShadowCaster(graveMesh);
+            return;
+        }
+
         if (!type) {
             type = Math.random() < 0.7 ? 'tree' : 'rock'; // 70% chance for a tree
         }

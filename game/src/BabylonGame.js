@@ -32,6 +32,7 @@ export class BabylonGame {
         this.models = {};
         this.highlightLayer = null;
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
+        this.graves = [];
 
         this.projectiles = [];
         this.enemyProjectiles = [];
@@ -269,9 +270,6 @@ export class BabylonGame {
                 if (chick) {
                     this.ui.populateAnimationSelect(Object.keys(chick.animations));
                 }
-            }
-            if (e.key === 'p') {
-                this.startCombat();
             }
         });
     }

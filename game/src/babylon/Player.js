@@ -68,6 +68,8 @@ export class Player {
         this.nearbyResource = null;
         this.canUnlock = false;
         this.nearbyUnlockableTile = null;
+        this.canStartCombat = false;
+        this.nearbyGrave = null;
 
         // Progression
         this.level = 1;
@@ -127,7 +129,9 @@ export class Player {
             if (key in this.keys) this.keys[key] = true;
 
             if (key === 'e') {
-                if (this.canUnlock && this.nearbyUnlockableTile) {
+                if (this.canStartCombat && this.nearbyGrave) {
+                    this.game.startCombat();
+                } else if (this.canUnlock && this.nearbyUnlockableTile) {
                     const { x, z } = this.nearbyUnlockableTile.metadata;
                     this.game.world.unlockTile(x, z, true);
                 } else if (this.canCollect && this.nearbyResource) {
@@ -263,6 +267,19 @@ export class Player {
     updateInteractionHighlights() {
         const playerPos = this.hitbox.position;
 
+        // --- Grave Detection ---
+        let closestGrave = null;
+        let minGraveDist = 2;
+        this.game.graves.forEach(grave => {
+            if (grave.isEnabled()) {
+                const distance = BABYLON.Vector3.Distance(playerPos, grave.position);
+                if (distance < minGraveDist) {
+                    minGraveDist = distance;
+                    closestGrave = grave;
+                }
+            }
+        });
+
         // --- Resource Detection ---
         let closestResource = null;
         let minResourceDist = 2;
@@ -297,15 +314,27 @@ export class Player {
         // Clear previous highlights first
         if (this.nearbyResource) this.game.highlightLayer.removeMesh(this.nearbyResource);
         if (this.nearbyUnlockableTile) this.game.highlightLayer.removeMesh(this.nearbyUnlockableTile);
+        if (this.nearbyGrave) this.game.highlightLayer.removeMesh(this.nearbyGrave);
 
-        // Prioritize tile unlocking over resource gathering if both are in range
-        if (closestUnlockableTile) {
+        // Prioritize grave interaction
+        if (closestGrave) {
+            this.canStartCombat = true;
+            this.nearbyGrave = closestGrave;
+            this.game.highlightLayer.addMesh(this.nearbyGrave, BABYLON.Color3.Red());
+
+            this.canCollect = false;
+            this.nearbyResource = null;
+            this.canUnlock = false;
+            this.nearbyUnlockableTile = null;
+        } else if (closestUnlockableTile) {
             this.canUnlock = true;
             this.nearbyUnlockableTile = closestUnlockableTile;
             this.game.highlightLayer.addMesh(this.nearbyUnlockableTile, BABYLON.Color3.Green());
 
             this.canCollect = false;
             this.nearbyResource = null;
+            this.canStartCombat = false;
+            this.nearbyGrave = null;
         } else if (closestResource) {
             this.canCollect = true;
             this.nearbyResource = closestResource;
@@ -313,11 +342,15 @@ export class Player {
 
             this.canUnlock = false;
             this.nearbyUnlockableTile = null;
+            this.canStartCombat = false;
+            this.nearbyGrave = null;
         } else {
             this.canCollect = false;
             this.nearbyResource = null;
             this.canUnlock = false;
             this.nearbyUnlockableTile = null;
+            this.canStartCombat = false;
+            this.nearbyGrave = null;
         }
     }
 

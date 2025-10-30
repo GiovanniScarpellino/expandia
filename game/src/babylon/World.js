@@ -58,11 +58,7 @@ export class World {
             this.game.resourceManager.spawnResource(targetTile.position);
         }
 
-        // Trigger combat encounter
-        if (withCost && Math.random() < 0.25) { // 25% chance to trigger combat on unlock
-            console.log("An enemy encounter has been triggered!");
-            this.game.startCombat();
-        }
+
     }
 
     createNeighboringLockedTiles(x, z) {
