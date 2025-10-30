@@ -245,10 +245,7 @@ export class BabylonGame {
 
             switch (pointerInfo.type) {
                 case BABYLON.PointerEventTypes.POINTERMOVE:
-                    const pickResultMove = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
-                    if (pickResultMove.hit) {
-                        this.mousePositionInWorld = pickResultMove.pickedPoint;
-                    }
+                    // Now handled in the render loop
                     break;
                 case BABYLON.PointerEventTypes.POINTERDOWN:
                     if (this.player) {
@@ -392,6 +389,12 @@ export class BabylonGame {
         this.engine.runRenderLoop(() => {
             if (this.gameState === 'RUNNING') {
                 const delta = this.engine.getDeltaTime() / 1000;
+
+                // Update mouse position every frame
+                const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
+                if (pickResult.hit) {
+                    this.mousePositionInWorld = pickResult.pickedPoint;
+                }
 
                 if (this.player) {
                     this.player.update(delta);

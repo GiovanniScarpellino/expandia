@@ -39,7 +39,7 @@ export class World {
         }
 
         if (withCost) {
-            const cost = 5; // Lowered initial cost
+            const cost = 1; // Lowered initial cost
             if (this.game.wood < cost) {
                 console.log("Not enough wood to unlock tile!");
                 return; // Not enough resources
