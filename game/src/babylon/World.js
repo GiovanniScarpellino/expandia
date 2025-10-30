@@ -24,6 +24,10 @@ export class World {
                 this.unlockTile(x, z, false); // Unlock initial tiles without cost
             }
         }
+
+        // Guarantee some starting resources
+        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(1, 1)].position, 'tree');
+        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(-1, -1)].position, 'tree');
     }
 
     unlockTile(x, z, withCost = true) {
@@ -48,6 +52,11 @@ export class World {
 
         // Create locked neighbors
         this.createNeighboringLockedTiles(x, z);
+
+        // Procedurally spawn resources on new tiles
+        if (withCost && Math.random() < 0.3) { // 30% chance
+            this.game.resourceManager.spawnResource(targetTile.position);
+        }
 
         // Trigger combat encounter
         if (withCost && Math.random() < 0.25) { // 25% chance to trigger combat on unlock

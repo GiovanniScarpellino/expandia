@@ -19,37 +19,42 @@ export class ResourceManager {
         this.respawnTime = 10000; // 10 seconds
     }
 
-    initialize(resourceData) {
-        resourceData.forEach(data => {
-            let model;
-            if (data.type === 'tree') {
-                model = this.game.models.tree;
-            } else if (data.type === 'rock') {
-                model = this.game.models.rock;
-            }
+    initialize() {
+        // Resources are now spawned procedurally by World.js
+    }
 
-            if (model) {
-                const newMesh = model.mesh.clone(`${data.type}-${this.resources.length}`);
-                newMesh.position = new BABYLON.Vector3(data.x, 0, data.z);
-                newMesh.setEnabled(true);
+    spawnResource(position, type = null) {
+        if (!type) {
+            type = Math.random() < 0.7 ? 'tree' : 'rock'; // 70% chance for a tree
+        }
 
-                newMesh.getChildMeshes().forEach(m => {
-                    m.checkCollisions = true;
-                    m.collisionGroup = COLLISION_GROUPS.WALL;
-                });
+        let model;
+        if (type === 'tree') {
+            model = this.game.models.tree;
+        } else if (type === 'rock') {
+            model = this.game.models.rock;
+        }
 
-                // Add metadata for targeting
-                newMesh.metadata = {
-                    type: 'resource',
-                    resourceType: data.type,
-                    isTargeted: false
-                };
+        if (model) {
+            const newMesh = model.mesh.clone(`${type}-${this.resources.length}`);
+            newMesh.position = position.clone();
+            newMesh.setEnabled(true);
 
-                this.game.addShadowCaster(newMesh);
-                const resource = new Resource(newMesh, data.type);
-                this.resources.push(resource);
-            }
-        });
+            newMesh.getChildMeshes().forEach(m => {
+                m.checkCollisions = true;
+                m.collisionGroup = COLLISION_GROUPS.WALL;
+            });
+
+            newMesh.metadata = {
+                type: 'resource',
+                resourceType: type,
+                isTargeted: false
+            };
+
+            this.game.addShadowCaster(newMesh);
+            const resource = new Resource(newMesh, type);
+            this.resources.push(resource);
+        }
     }
 
     update(delta) {

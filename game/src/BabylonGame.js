@@ -31,7 +31,7 @@ export class BabylonGame {
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
         this.highlightLayer = null;
-        this.yolkSplatMaterial = null;
+        this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
         this.projectiles = [];
         this.enemyProjectiles = [];
@@ -46,7 +46,7 @@ export class BabylonGame {
         this.ui = new UI(this);
 
         // Combat Arena
-        this.arenaCenter = new BABYLON.Vector3(1000, 0, 1000);
+        this.arenaCenter = new BABYLON.Vector3(0, 0, 0); // Will be updated in createScene
         this.playerReturnPosition = null;
 
         // Upgrade Pool
@@ -189,13 +189,16 @@ export class BabylonGame {
         shadowGenerator.darkness = 0.3;
 
         // Create a large, invisible ground plane for mouse picking in the main world
-        const ground = BABYLON.MeshBuilder.CreateGround("mouseGround", { width: 1000, height: 1000 }, this.scene);
+        const ground = BABYLON.MeshBuilder.CreateGround("mouseGround", { width: 10000, height: 10000 }, this.scene);
         ground.material = new BABYLON.StandardMaterial("groundMat", this.scene);
         ground.material.alpha = 0; // Make it invisible
         ground.checkCollisions = false;
         ground.isPickable = true;
 
         this.world = new World(this, this.scene);
+        this.resourceManager = new ResourceManager(this);
+        this.enemyManager = new EnemyManager(this);
+        this.buildingManager = new BuildingManager(this);
 
         // Create the combat arena using the world tile system
         const arenaRadius = 4; // Creates a 9x9 area
@@ -204,28 +207,15 @@ export class BabylonGame {
             for (let z = -arenaRadius - 1; z <= arenaRadius + 1; z++) {
                 const isUnlocked = Math.abs(x) <= arenaRadius && Math.abs(z) <= arenaRadius;
                 const tile = this.world.createTile(arenaTileOffset.x + x, arenaTileOffset.z + z, isUnlocked);
-                // Make arena floor pickable for player rotation
                 if(isUnlocked) {
                     tile.name = "arenaGround";
                 }
             }
         }
-        // Adjust arena center to world coordinates for teleportation
-        this.arenaCenter = new BABYLON.Vector3(arenaTileOffset.x * this.world.tileSize, 0, arenaTileOffset.z * this.world.tileSize);
+        this.arenaCenter = new BABYLON.Vector3(arenaTileOffset.x * this.world.tileSize, 0.5, arenaTileOffset.z * this.world.tileSize);
 
         this.world.init();
-
-        this.resourceManager = new ResourceManager(this);
-        const resourceData = [
-            { type: 'tree', x: 8, z: 8 },
-            { type: 'tree', x: -8, z: 8 },
-            { type: 'rock', x: 8, z: -8 },
-            { type: 'rock', x: -8, z: -8 },
-        ];
-        this.resourceManager.initialize(resourceData);
-
-        this.enemyManager = new EnemyManager(this);
-        this.buildingManager = new BuildingManager(this);
+        this.resourceManager.initialize();
 
         const playerMesh = this.models.player.mesh.clone("player");
         playerMesh.setEnabled(true);
@@ -236,16 +226,6 @@ export class BabylonGame {
         this.ui.updateResources(this.wood, this.stone);
 
         this.camera.setTarget(this.player.hitbox.position);
-
-        // Post-processing
-        /*
-        const pipeline = new BABYLON.DefaultRenderingPipeline("defaultPipeline", true, this.scene, [this.camera]);
-        pipeline.samples = 4;
-        pipeline.bloomEnabled = true;
-        pipeline.bloomThreshold = 0.8;
-        pipeline.bloomWeight = 0.3;
-        pipeline.fxaaEnabled = true;
-        */
     }
 
     setupCameraControls() {
@@ -296,19 +276,6 @@ export class BabylonGame {
             if (e.key === 'p') {
                 this.startCombat();
             }
-
-            // Debug controls
-            const chick = this.buildingManager.chicks[this.buildingManager.chicks.length - 1];
-            if (chick) {
-                if (e.key === 'ArrowLeft') {
-                    chick.hitbox.rotation.y -= 0.1;
-                    console.log(`Chick hitbox rotation y: ${chick.hitbox.rotation.y}`);
-                }
-                if (e.key === 'ArrowRight') {
-                    chick.hitbox.rotation.y += 0.1;
-                    console.log(`Chick hitbox rotation y: ${chick.hitbox.rotation.y}`);
-                }
-            }
         });
     }
 
@@ -316,9 +283,8 @@ export class BabylonGame {
         if (this.gameMode === 'COMBAT') return;
         console.log("Starting combat...");
 
-        // Save player's current position and teleport to arena
         this.playerReturnPosition = this.player.hitbox.position.clone();
-        this.player.hitbox.position = this.arenaCenter.add(new BABYLON.Vector3(0, 0.5, 0));
+        this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
         this.enemyManager.start(this.arenaCenter);
@@ -329,14 +295,12 @@ export class BabylonGame {
         if (this.gameMode !== 'COMBAT') return;
         console.log("Ending combat...");
 
-        // Teleport player back to their original position
         if (this.playerReturnPosition) {
             this.player.hitbox.position = this.playerReturnPosition;
         }
         this.playerReturnPosition = null;
 
         this.gameMode = 'EXPLORATION';
-        // Clean up any remaining enemies, etc.
         this.enemyManager.stop();
     }
 
@@ -355,7 +319,6 @@ export class BabylonGame {
     startLevelUp() {
         this.gameState = 'LEVELUP';
         
-        // Get 3 unique random upgrades
         const availableUpgrades = [...this.upgradePool];
         const chosenUpgrades = [];
         for (let i = 0; i < 3 && availableUpgrades.length > 0; i++) {
