@@ -18,9 +18,9 @@ export class World {
     }
 
     init() {
-        // Create a small 3x3 starting area
-        for (let x = -1; x <= 1; x++) {
-            for (let z = -1; z <= 1; z++) {
+        // Create a larger 5x5 starting area
+        for (let x = -2; x <= 2; x++) {
+            for (let z = -2; z <= 2; z++) {
                 this.unlockTile(x, z, false); // Unlock initial tiles without cost
             }
         }
