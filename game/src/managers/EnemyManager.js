@@ -51,7 +51,7 @@ export class EnemyManager {
             this.waveTimer = 0;
             this.waveNumber++;
             // For now, let's say combat ends after 3 waves
-            if (this.waveNumber > 3) {
+            if (this.waveNumber > 1) {
                 this.game.endCombat();
                 return;
             }

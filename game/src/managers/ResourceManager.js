@@ -3,10 +3,11 @@ import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 // Simple class to hold resource data
 class Resource {
-    constructor(mesh, type) {
+    constructor(mesh, type, visualMesh = null) {
         this.mesh = mesh;
         this.type = type;
         this.initialPosition = mesh.position.clone();
+        this.visualMesh = visualMesh || mesh;
     }
 }
 
@@ -24,6 +25,12 @@ export class ResourceManager {
     }
 
     spawnResource(position, type = null) {
+        // Prevent spawning if the player is too close
+        if (this.game.player && BABYLON.Vector3.Distance(this.game.player.hitbox.position, position) < 1.0) {
+            console.log("Player is too close, resource will not spawn.");
+            return;
+        }
+
         const random = Math.random();
         if (random < 0.25) {
             // 25% chance to spawn a grave
@@ -51,24 +58,50 @@ export class ResourceManager {
         }
 
         if (model) {
-            const newMesh = model.mesh.clone(`${type}-${this.resources.length}`);
-            newMesh.position = position.clone();
-            newMesh.setEnabled(true);
+            if (type === 'rock') {
+                const rockMesh = model.mesh.clone(`rock-visual-${this.resources.length}`);
+                rockMesh.setEnabled(true);
+                rockMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
 
-            newMesh.getChildMeshes().forEach(m => {
-                m.checkCollisions = true;
-                m.collisionGroup = COLLISION_GROUPS.WALL;
-            });
+                const collisionBox = BABYLON.MeshBuilder.CreateBox(`rock-collision-${this.resources.length}`, { width: 0.8, height: 0.8, depth: 0.8 }, this.scene);
+                collisionBox.position = position.clone();
+                collisionBox.position.y = 0.4;
+                collisionBox.isVisible = false;
+                collisionBox.checkCollisions = true;
+                collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
 
-            newMesh.metadata = {
-                type: 'resource',
-                resourceType: type,
-                isTargeted: false
-            };
+                rockMesh.parent = collisionBox;
+                rockMesh.position.y = -0.4;
 
-            this.game.addShadowCaster(newMesh);
-            const resource = new Resource(newMesh, type);
-            this.resources.push(resource);
+                collisionBox.metadata = {
+                    type: 'resource',
+                    resourceType: type,
+                    isTargeted: false
+                };
+
+                this.game.addShadowCaster(rockMesh);
+                const resource = new Resource(collisionBox, type, rockMesh);
+                this.resources.push(resource);
+            } else { // For trees and other resources
+                const newMesh = model.mesh.clone(`${type}-${this.resources.length}`);
+                newMesh.position = position.clone();
+                newMesh.setEnabled(true);
+
+                newMesh.getChildMeshes().forEach(m => {
+                    m.checkCollisions = true;
+                    m.collisionGroup = COLLISION_GROUPS.WALL;
+                });
+
+                newMesh.metadata = {
+                    type: 'resource',
+                    resourceType: type,
+                    isTargeted: false
+                };
+
+                this.game.addShadowCaster(newMesh);
+                const resource = new Resource(newMesh, type);
+                this.resources.push(resource);
+            }
         }
     }
 

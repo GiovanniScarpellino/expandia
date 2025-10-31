@@ -23,32 +23,12 @@ export class UI {
         this.levelUpScreen = document.getElementById('levelup-screen');
         this.upgradeCardsContainer = document.getElementById('upgrade-cards-container');
 
-        // Debug controls
-        this.animationSelect = document.getElementById('animation-select');
-        this.animationSelect.addEventListener('change', (e) => {
-            console.log("Animation selected:", e.target.value);
-            const chick = this.game.buildingManager.chicks[this.game.buildingManager.chicks.length - 1];
-            if (chick) {
-                chick.playAnimation(e.target.value, true);
-            }
-        });
-
         // Initial state
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
         this.updateResources(0, 0);
         this.waveStats.style.display = 'none';
-    }
-
-    populateAnimationSelect(animationNames) {
-        this.animationSelect.innerHTML = '';
-        animationNames.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.innerText = name;
-            this.animationSelect.appendChild(option);
-        });
     }
 
     togglePauseScreen(show) {

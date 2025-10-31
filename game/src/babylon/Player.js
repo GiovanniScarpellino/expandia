@@ -44,6 +44,7 @@ export class Player {
         this.keys = { z: false, s: false, q: false, d: false, e: false };
         this.inputHandler = this.setupInput();
         this._verticalVelocity = 0;
+        this.lastSafePosition = this.hitbox.position.clone();
 
         // Animations
         this.animations = {};
@@ -65,7 +66,7 @@ export class Player {
         this.lastAttackTime = 0;
         this.projectileSpeedModifier = 1;
         this.canCollect = false;
-        this.nearbyResource = null;
+        this.nearbyResource = null; // This will hold the entire Resource object
         this.canUnlock = false;
         this.nearbyUnlockableTile = null;
         this.canStartCombat = false;
@@ -135,7 +136,7 @@ export class Player {
                     const { x, z } = this.nearbyUnlockableTile.metadata;
                     this.game.world.unlockTile(x, z, true);
                 } else if (this.canCollect && this.nearbyResource) {
-                    this.harvest(this.nearbyResource);
+                    this.harvest(this.nearbyResource.mesh); // Pass the collision mesh
                 }
             }
         };
@@ -258,6 +259,16 @@ export class Player {
             this._verticalVelocity = 0;
         }
 
+        // --- Safety Net --- 
+        if (this.game.world.canMoveTo(this.hitbox.position)) {
+            this.lastSafePosition = this.hitbox.position.clone();
+        } else {
+            // Player is on a locked tile, teleport back to safety
+            console.warn("Player is on a locked tile! Teleporting back to safety.");
+            this.hitbox.position = this.lastSafePosition.clone();
+            this._verticalVelocity = 0; // Reset vertical velocity to prevent falling through floor
+        }
+
         // --- Interaction Detection ---
         if (this.game.gameMode === 'EXPLORATION') {
             this.updateInteractionHighlights();
@@ -288,7 +299,7 @@ export class Player {
                 const distance = BABYLON.Vector3.Distance(playerPos, resource.mesh.position);
                 if (distance < minResourceDist) {
                     minResourceDist = distance;
-                    closestResource = resource.mesh;
+                    closestResource = resource; // Store the whole resource object
                 }
             }
         });
@@ -312,7 +323,10 @@ export class Player {
 
         // --- Update State and Highlights ---
         // Clear previous highlights first
-        if (this.nearbyResource) this.game.highlightLayer.removeMesh(this.nearbyResource);
+        if (this.nearbyResource) {
+            this.game.highlightLayer.removeMesh(this.nearbyResource.visualMesh);
+            this.nearbyResource.visualMesh.getChildMeshes(false).forEach(m => this.game.highlightLayer.removeMesh(m));
+        }
         if (this.nearbyUnlockableTile) this.game.highlightLayer.removeMesh(this.nearbyUnlockableTile);
         if (this.nearbyGrave) this.game.highlightLayer.removeMesh(this.nearbyGrave);
 
@@ -338,7 +352,8 @@ export class Player {
         } else if (closestResource) {
             this.canCollect = true;
             this.nearbyResource = closestResource;
-            this.game.highlightLayer.addMesh(this.nearbyResource, BABYLON.Color3.Yellow());
+            this.game.highlightLayer.addMesh(this.nearbyResource.visualMesh, BABYLON.Color3.Yellow());
+            this.nearbyResource.visualMesh.getChildMeshes(false).forEach(m => this.game.highlightLayer.addMesh(m, BABYLON.Color3.Yellow()));
 
             this.canUnlock = false;
             this.nearbyUnlockableTile = null;

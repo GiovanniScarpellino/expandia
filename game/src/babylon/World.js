@@ -27,7 +27,7 @@ export class World {
 
         // Guarantee some starting resources
         this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(1, 1)].position, 'tree');
-        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(-1, -1)].position, 'tree');
+        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(-1, -1)].position, 'rock');
     }
 
     unlockTile(x, z, withCost = true) {
@@ -79,10 +79,28 @@ export class World {
     }
 
     canMoveTo(position) {
-        const { x, z } = this.getTileCoordinates(position);
-        const key = this.getTileKey(x, z);
-        const tile = this.tiles[key];
-        return tile && tile.metadata.unlocked;
+        // Check not just the center, but the corners of the player's approximate hitbox
+        const hitboxSize = 0.5; // Should match player's hitbox width/depth
+        const halfSize = hitboxSize / 2;
+
+        const positionsToCheck = [
+            position, // Center
+            new BABYLON.Vector3(position.x + halfSize, position.y, position.z + halfSize), // Top-Right
+            new BABYLON.Vector3(position.x - halfSize, position.y, position.z + halfSize), // Top-Left
+            new BABYLON.Vector3(position.x + halfSize, position.y, position.z - halfSize), // Bottom-Right
+            new BABYLON.Vector3(position.x - halfSize, position.y, position.z - halfSize)  // Bottom-Left
+        ];
+
+        for (const pos of positionsToCheck) {
+            const { x, z } = this.getTileCoordinates(pos);
+            const key = this.getTileKey(x, z);
+            const tile = this.tiles[key];
+            if (!tile || !tile.metadata.unlocked) {
+                return false; // If any point is on an invalid or locked tile, movement is disallowed
+            }
+        }
+
+        return true;
     }
 
     getSpawnPoints(count) {

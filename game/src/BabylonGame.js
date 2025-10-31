@@ -208,8 +208,8 @@ export class BabylonGame {
             for (let z = -arenaRadius - 1; z <= arenaRadius + 1; z++) {
                 const isUnlocked = Math.abs(x) <= arenaRadius && Math.abs(z) <= arenaRadius;
                 const tile = this.world.createTile(arenaTileOffset.x + x, arenaTileOffset.z + z, isUnlocked);
-                if(isUnlocked) {
-                    tile.name = "arenaGround";
+                if (isUnlocked) {
+                    BABYLON.Tags.AddTagsTo(tile, "arenaGround");
                 }
             }
         }
@@ -266,10 +266,6 @@ export class BabylonGame {
                 const backward = this.player.hitbox.getDirection(new BABYLON.Vector3(0, 0, -1));
                 spawnPosition.addInPlace(backward.scale(2));
                 this.buildingManager.createChick('lumberjackChick', spawnPosition);
-                const chick = this.buildingManager.chicks[this.buildingManager.chicks.length - 1];
-                if (chick) {
-                    this.ui.populateAnimationSelect(Object.keys(chick.animations));
-                }
             }
         });
     }
@@ -284,6 +280,14 @@ export class BabylonGame {
         this.gameMode = 'COMBAT';
         this.enemyManager.start(this.arenaCenter);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
+
+        const light = this.scene.getLightByName("dirLight");
+
+        if (light) {         
+            console.log(this.player.hitbox.position);
+            console.log(this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20)));
+            light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
+        }
     }
 
     endCombat() {
@@ -294,6 +298,11 @@ export class BabylonGame {
             this.player.hitbox.position = this.playerReturnPosition;
         }
         this.playerReturnPosition = null;
+
+        const light = this.scene.getLightByName("dirLight");
+        if (light) {
+            light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
+        }
 
         this.gameMode = 'EXPLORATION';
         this.enemyManager.stop();
@@ -313,7 +322,7 @@ export class BabylonGame {
 
     startLevelUp() {
         this.gameState = 'LEVELUP';
-        
+
         const availableUpgrades = [...this.upgradePool];
         const chosenUpgrades = [];
         for (let i = 0; i < 3 && availableUpgrades.length > 0; i++) {
@@ -421,7 +430,7 @@ export class BabylonGame {
                     chick.update(delta);
                 });
             }
-            
+
             this.scene.render();
         });
 
