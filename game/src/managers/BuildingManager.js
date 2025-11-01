@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { Wall } from '../babylon/Wall.js';
 import { LumberjackChick } from '../babylon/LumberjackChick.js';
+import { MinerChick } from '../babylon/MinerChick.js';
 
 export class BuildingManager {
     constructor(game) {
@@ -22,28 +23,39 @@ export class BuildingManager {
         // Costs
         this.itemCosts = {
             wall: { wood: 5, stone: 0 },
-            lumberjackChick: { wood: 10, stone: 0 }
+            lumberjackChick: { wood: 10, stone: 0 },
+            minerChick: { wood: 0, stone: 10 }
         };
     }
 
-    createChick(chickType, position) {
-        const cost = this.itemCosts[chickType];
-        if (this.game.wood < cost.wood || this.game.stone < cost.stone) {
-            console.log("Not enough resources to create a chick.");
+    createLumberjackChick() {
+        const cost = this.itemCosts.lumberjackChick;
+        if (this.game.wood < cost.wood) {
+            console.log("Not enough wood to create a lumberjack chick.");
             return;
         }
 
         this.game.addResource('tree', -cost.wood);
+
+        const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(2, 0.5, -2));
+        const newChick = new LumberjackChick(this.game, spawnPosition);
+        this.chicks.push(newChick);
+        console.log("A new lumberjack chick has been created!");
+    }
+
+    createMinerChick() {
+        const cost = this.itemCosts.minerChick;
+        if (this.game.stone < cost.stone) {
+            console.log("Not enough stone to create a miner chick.");
+            return;
+        }
+
         this.game.addResource('rock', -cost.stone);
 
-        // Fixed spawn position in front of the base
-        const spawnPosition = position.add(new BABYLON.Vector3(0, 0.5, -3));
-
-        if (chickType === 'lumberjackChick') {
-            const newChick = new LumberjackChick(this.game, spawnPosition);
-            this.chicks.push(newChick);
-            console.log("A new lumberjack chick has been created!");
-        }
+        const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(-2, 0.5, -2));
+        const newChick = new MinerChick(this.game, spawnPosition);
+        this.chicks.push(newChick);
+        console.log("A new miner chick has been created!");
     }
 
     dispose() {
@@ -132,9 +144,6 @@ export class BuildingManager {
                     this.game.world.blockedEdges.add(edgeKey);
                 }
 
-            } else if (this.currentItemType === 'lumberjackChick') {
-                const newChick = new LumberjackChick(this.game, this.ghostMesh.position.clone());
-                this.chicks.push(newChick);
             }
             
             console.log(`${this.currentItemType} placed.`);
@@ -172,8 +181,6 @@ export class BuildingManager {
 
         if (itemType === 'wall') {
             this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
-        } else if (itemType === 'lumberjackChick') {
-            this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostChick", { width: 0.5, height: 1, depth: 0.5 }, this.scene);
         }
         
         if (this.ghostMesh) {
@@ -202,8 +209,6 @@ export class BuildingManager {
             
             if (this.currentItemType === 'wall') {
                 this.updateWallGhost(pickPoint);
-            } else if (this.currentItemType === 'lumberjackChick') {
-                this.updateChickGhost(pickPoint);
             }
         } else {
             this.canPlace = false;
@@ -251,24 +256,6 @@ export class BuildingManager {
                 this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
             }
         } else {
-            this.canPlace = false;
-            this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
-        }
-    }
-
-    updateChickGhost(pickPoint) {
-        const { x, z } = this.game.world.getTileCoordinates(pickPoint);
-        const key = this.game.world.getTileKey(x, z);
-        const tile = this.game.world.tiles[key];
-
-        if (tile && tile.metadata.unlocked) {
-            this.ghostMesh.position.x = tile.position.x;
-            this.ghostMesh.position.z = tile.position.z;
-            this.canPlace = true;
-            this.ghostMesh.material.emissiveColor = BABYLON.Color3.Green();
-        } else {
-            this.ghostMesh.position.x = pickPoint.x;
-            this.ghostMesh.position.z = pickPoint.z;
             this.canPlace = false;
             this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
         }

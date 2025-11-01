@@ -85,20 +85,20 @@ export class UI {
     populateShop() {
         this.shopItemsContainer.innerHTML = '';
         const items = [
-            { id: 'lumberjackChick', name: 'Poussin Bûcheron', cost: { wood: 10, stone: 0 } },
+            { id: 'lumberjackChick', name: 'Poussin Bûcheron', cost: { wood: 10, stone: 0 }, action: () => this.game.buildingManager.createLumberjackChick() },
+            { id: 'minerChick', name: 'Poussin Mineur', cost: { wood: 0, stone: 10 }, action: () => this.game.buildingManager.createMinerChick() },
         ];
 
         items.forEach(item => {
+            const costText = item.cost.wood > 0 ? `${item.cost.wood} bois` : `${item.cost.stone} pierre`;
             const itemDiv = document.createElement('div');
             itemDiv.className = 'shop-item';
             itemDiv.innerHTML = `
                 <span>${item.name}</span>
-                <span>Coût: ${item.cost.wood} bois</span>
+                <span>Coût: ${costText}</span>
                 <button>Acheter</button>
             `;
-            itemDiv.querySelector('button').addEventListener('click', () => {
-                this.game.buildingManager.createChick(item.id, this.game.base.position);
-            });
+            itemDiv.querySelector('button').addEventListener('click', item.action);
             this.shopItemsContainer.appendChild(itemDiv);
         });
     }
