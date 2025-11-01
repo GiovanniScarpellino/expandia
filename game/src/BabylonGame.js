@@ -315,7 +315,6 @@ export class BabylonGame {
         this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
-        document.body.style.cursor = 'none'; // Hide cursor
         this.enemyManager.start(this.arenaCenter, this.heartFragments);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
 
@@ -343,7 +342,6 @@ export class BabylonGame {
         }
 
         this.gameMode = 'EXPLORATION';
-        document.body.style.cursor = 'default'; // Show cursor
         this.enemyManager.stop();
     }
 
