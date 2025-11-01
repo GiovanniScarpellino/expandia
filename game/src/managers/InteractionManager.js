@@ -47,7 +47,30 @@ export class InteractionManager {
     }
 
     isPlayerClose(interactable) {
-        return BABYLON.Vector3.Distance(this.player.hitbox.position, interactable.mesh.getAbsolutePosition()) < interactable.interactionDistance;
+        // If the interactable is a tile, calculate distance to the closest point on its surface.
+        if (interactable.mesh.metadata && interactable.mesh.metadata.type === 'tile') {
+            const playerPos = this.player.hitbox.getAbsolutePosition();
+            const tilePos = interactable.mesh.getAbsolutePosition();
+            const tileSize = this.game.world.tileSize;
+            const halfSize = tileSize / 2;
+
+            // Find the closest point on the tile's XZ bounding box to the player
+            const closestX = Math.max(tilePos.x - halfSize, Math.min(playerPos.x, tilePos.x + halfSize));
+            const closestZ = Math.max(tilePos.z - halfSize, Math.min(playerPos.z, tilePos.z + halfSize));
+
+            const closestPoint = new BABYLON.Vector3(closestX, playerPos.y, closestZ);
+
+            // Calculate the distance from the player to this closest point
+            const distance = BABYLON.Vector3.Distance(playerPos, closestPoint);
+            return distance < interactable.interactionDistance;
+
+        } else {
+            // Original logic for other interactables (like resources, base, etc.)
+            return BABYLON.Vector3.Distance(
+                this.player.hitbox.getAbsolutePosition(), 
+                interactable.mesh.getAbsolutePosition()
+            ) < interactable.interactionDistance;
+        }
     }
 
     setTarget(interactable) {
