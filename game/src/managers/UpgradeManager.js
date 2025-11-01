@@ -7,10 +7,10 @@ export class UpgradeManager {
             multiTileUnlock: {
                 name: 'Déblocage Multiple',
                 description: 'Débloque plusieurs tuiles adjacentes à la fois.',
-                cost: [50, 150, 300], // Cost for level 1, 2, 3
+                cost: [1, 150, 300], // Cost for level 1, 2, 3
                 costType: 'wood',
                 maxLevel: 3,
-                isImplemented: true,
+                isImplemented: false,
             },
             chickSpeed: {
                 name: 'Vitesse des Poussins',
