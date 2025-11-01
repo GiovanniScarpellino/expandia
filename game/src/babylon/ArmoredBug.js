@@ -5,7 +5,7 @@ export class ArmoredBug {
     constructor(game, position) {
         this.game = game;
         this.scene = game.scene;
-        this.speed = 0.6; // Slower than the normal bug
+        this.speed = 0.8; // Slower than the normal bug
         this.isDisposed = false;
 
         // Stats - tougher than the normal bug

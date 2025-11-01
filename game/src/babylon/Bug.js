@@ -5,7 +5,7 @@ export class Bug {
     constructor(game, position) {
         this.game = game;
         this.scene = game.scene;
-        this.speed = 0.8; // units per second
+        this.speed = 1.0; // units per second
         this.isDisposed = false;
 
         // Stats

@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { Bug } from '../babylon/Bug.js';
 import { ArmoredBug } from '../babylon/ArmoredBug.js';
+import { Watchtower } from '../babylon/Watchtower.js';
 
 export class EnemyManager {
     constructor(game) {
@@ -8,7 +9,7 @@ export class EnemyManager {
         this.scene = game.scene;
         this.enemies = [];
         this.waveNumber = 0;
-        this.timeBetweenWaves = 3000; // 3 seconds
+        this.timeBetweenWaves = 2000; // 2 seconds
         this.waveTimer = 0;
         this.isWaveActive = false;
         this.arenaCenter = null;
@@ -19,8 +20,8 @@ export class EnemyManager {
             {
                 totalWaves: 2,
                 waves: [
-                    { bug: 5, armoredBug: 0 },
                     { bug: 8, armoredBug: 0 },
+                    { bug: 6, armoredBug: 2 },
                 ],
                 reward: { gold: 50, wood: 20, stone: 10 }
             },
@@ -29,8 +30,8 @@ export class EnemyManager {
                 totalWaves: 3,
                 waves: [
                     { bug: 10, armoredBug: 0 },
-                    { bug: 7, armoredBug: 2 },
-                    { bug: 10, armoredBug: 3 },
+                    { bug: 8, armoredBug: 3 },
+                    { bug: 5, armoredBug: 1, watchtower: 1 },
                 ],
                 reward: { gold: 75, wood: 30, stone: 15 }
             },
@@ -40,7 +41,7 @@ export class EnemyManager {
                 waves: [
                     { bug: 12, armoredBug: 2 },
                     { bug: 10, armoredBug: 5 },
-                    { bug: 15, armoredBug: 7 },
+                    { bug: 8, armoredBug: 2, watchtower: 2 },
                 ],
                 reward: { gold: 100, wood: 40, stone: 20 }
             },
@@ -113,7 +114,8 @@ export class EnemyManager {
         const waveConfig = this.currentCombatConfig.waves[this.waveNumber - 1];
         const bugCount = waveConfig.bug || 0;
         const armoredBugCount = waveConfig.armoredBug || 0;
-        const totalEnemies = bugCount + armoredBugCount;
+        const watchtowerCount = waveConfig.watchtower || 0;
+        const totalEnemies = bugCount + armoredBugCount + watchtowerCount;
 
         let spawnedCount = 0;
         for (let i = 0; i < bugCount; i++) {
@@ -121,6 +123,9 @@ export class EnemyManager {
         }
         for (let i = 0; i < armoredBugCount; i++) {
             this.spawnEnemy('armoredBug', spawnedCount++, totalEnemies);
+        }
+        for (let i = 0; i < watchtowerCount; i++) {
+            this.spawnEnemy('watchtower', spawnedCount++, totalEnemies);
         }
 
         this.game.ui.updateWaveStats(this.waveNumber, totalEnemies);
@@ -138,6 +143,8 @@ export class EnemyManager {
             newEnemy = new Bug(this.game, spawnPoint);
         } else if (type === 'armoredBug') {
             newEnemy = new ArmoredBug(this.game, spawnPoint);
+        } else if (type === 'watchtower') {
+            newEnemy = new Watchtower(this.game, spawnPoint);
         }
         this.enemies.push(newEnemy);
     }
