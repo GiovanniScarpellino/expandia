@@ -437,6 +437,12 @@ export class BabylonGame {
         this.engine.runRenderLoop(() => {
             const delta = this.engine.getDeltaTime() / 1000;
 
+            // If the game is not running, skip all game logic updates
+            if (this.gameState !== 'RUNNING') {
+                this.scene.render(); // Still render the scene to show pause/gameover screens
+                return;
+            }
+
             if (this.player) {
                 this.player.update(delta);
                 this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
