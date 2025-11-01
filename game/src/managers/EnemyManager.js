@@ -157,5 +157,6 @@ export class EnemyManager {
         this.game.addGold(reward.gold);
         this.game.addResource('tree', reward.wood);
         this.game.addResource('rock', reward.stone);
+        this.game.ui.updateObjective(this.game.heartFragments, 5);
     }
 }

@@ -13,6 +13,9 @@ export class UI {
         this.stoneCounter = document.getElementById('stone-counter');
         this.goldCounter = document.getElementById('gold-counter');
 
+        // Objective elements
+        this.objectiveText = document.getElementById('objective-text');
+
         // Wave stats elements
         this.waveStats = document.getElementById('wave-stats');
         this.waveCounter = document.getElementById('wave-counter');
@@ -32,6 +35,7 @@ export class UI {
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
         this.updateResources(0, 0, 0);
+        this.updateObjective(0, 5); // Initial objective: 0/5 fragments
         this.waveStats.style.display = 'none';
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
@@ -142,6 +146,12 @@ export class UI {
         }
         if (this.goldCounter) {
             this.goldCounter.innerText = `Or: ${gold}`;
+        }
+    }
+
+    updateObjective(currentFragments, totalFragments) {
+        if (this.objectiveText) {
+            this.objectiveText.innerText = `Objectif: Réparer le Cœur (${currentFragments} / ${totalFragments})`;
         }
     }
 }

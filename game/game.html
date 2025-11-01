@@ -51,7 +51,22 @@
 
     <!-- HUD -->
     <div id="hud">
-      <div id="player-stats">
+      <div id="resource-stats" class="hud-panel">
+        <div id="wood-counter">Bois: 0</div>
+        <div id="stone-counter">Pierre: 0</div>
+        <div id="gold-counter">Or: 0</div>
+      </div>
+
+      <div id="objective-display" class="hud-panel">
+        <span id="objective-text">Objectif: Réparer le Cœur (0 / 5)</span>
+      </div>
+
+      <div id="wave-stats" class="hud-panel">
+        <div id="wave-counter">Manche: 0</div>
+        <div id="enemy-counter">Ennemis: 0</div>
+      </div>
+
+      <div id="player-stats" class="hud-panel">
         <div class="health-bar-container">
             <div id="health-bar-fill"></div>
             <span id="health-text">100 / 100</span>
@@ -60,17 +75,6 @@
             <div id="xp-bar-fill"></div>
             <span id="level-text">Niv. 1</span>
         </div>
-      </div>
-
-      <div id="resource-stats">
-        <div id="wood-counter">Bois: 0</div>
-        <div id="stone-counter">Pierre: 0</div>
-        <div id="gold-counter">Or: 0</div>
-      </div>
-
-      <div id="wave-stats">
-        <div id="wave-counter">Manche: 0</div>
-        <div id="enemy-counter">Ennemis: 0</div>
       </div>
       
       <a id="help-link" href="./index.html"><i class="fas fa-question-circle"></i></a>

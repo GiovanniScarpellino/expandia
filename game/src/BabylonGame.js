@@ -243,6 +243,7 @@ export class BabylonGame {
 
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
         this.ui.updateResources(this.wood, this.stone, this.gold);
+        this.ui.updateObjective(this.heartFragments, 5);
 
         // Base visual model
         this.base = this.models.base.mesh.clone("base");

@@ -8,6 +8,7 @@ export class World {
         this.scene = scene;
         this.tileSize = 2;
         this.tiles = {};
+        this.tilesUnlockedSinceLastResource = 0;
 
         this.unlockedMaterial = new BABYLON.StandardMaterial("unlockedMat", scene);
         this.unlockedMaterial.diffuseColor = new BABYLON.Color3(0.6, 0.6, 0.7); // A neutral grey
@@ -54,9 +55,16 @@ export class World {
         // Create locked neighbors
         this.createNeighboringLockedTiles(x, z);
 
-        // Procedurally spawn resources on new tiles
-        if (withCost && Math.random() < 0.3) { // 30% chance
-            this.game.resourceManager.spawnResource(targetTile.position);
+        // --- Fairer Resource Spawning Logic ---
+        if (withCost) {
+            this.tilesUnlockedSinceLastResource++;
+            const resourceSpawnInterval = 3; // Guarantee a resource every 3 tiles
+
+            if (this.tilesUnlockedSinceLastResource >= resourceSpawnInterval) {
+                const resourceType = (this.tilesUnlockedSinceLastResource % 2 === 0) ? 'tree' : 'rock'; // Alternate types
+                this.game.resourceManager.spawnResource(targetTile.position, resourceType);
+                this.tilesUnlockedSinceLastResource = 0; // Reset counter
+            }
         }
     }
 
