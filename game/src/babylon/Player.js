@@ -41,7 +41,7 @@ export class Player {
 
         // Movement
         this.walkSpeed = 5;
-        this.keys = { z: false, s: false, q: false, d: false, e: false };
+        this.keys = { z: false, s: false, q: false, d: false };
         this.inputHandler = this.setupInput();
         this._verticalVelocity = 0;
         this.lastSafePosition = this.hitbox.position.clone();
@@ -65,12 +65,6 @@ export class Player {
         this.attackSpeed = 500;
         this.lastAttackTime = 0;
         this.projectileSpeedModifier = 1;
-        this.canCollect = false;
-        this.nearbyResource = null; // This will hold the entire Resource object
-        this.canUnlock = false;
-        this.nearbyUnlockableTile = null;
-        this.canStartCombat = false;
-        this.nearbyGrave = null;
 
         // Progression
         this.level = 1;
@@ -128,17 +122,6 @@ export class Player {
         const keydown = (e) => {
             const key = e.key.toLowerCase();
             if (key in this.keys) this.keys[key] = true;
-
-            if (key === 'e') {
-                if (this.canStartCombat && this.nearbyGrave) {
-                    this.game.startCombat();
-                } else if (this.canUnlock && this.nearbyUnlockableTile) {
-                    const { x, z } = this.nearbyUnlockableTile.metadata;
-                    this.game.world.unlockTile(x, z, true);
-                } else if (this.canCollect && this.nearbyResource) {
-                    this.harvest(this.nearbyResource.mesh); // Pass the collision mesh
-                }
-            }
         };
 
         const keyup = (e) => {
@@ -267,105 +250,6 @@ export class Player {
             console.warn("Player is on a locked tile! Teleporting back to safety.");
             this.hitbox.position = this.lastSafePosition.clone();
             this._verticalVelocity = 0; // Reset vertical velocity to prevent falling through floor
-        }
-
-        // --- Interaction Detection ---
-        if (this.game.gameMode === 'EXPLORATION') {
-            this.updateInteractionHighlights();
-        }
-    }
-
-    updateInteractionHighlights() {
-        const playerPos = this.hitbox.position;
-
-        // --- Grave Detection ---
-        let closestGrave = null;
-        let minGraveDist = 2;
-        this.game.graves.forEach(grave => {
-            if (grave.isEnabled()) {
-                const distance = BABYLON.Vector3.Distance(playerPos, grave.position);
-                if (distance < minGraveDist) {
-                    minGraveDist = distance;
-                    closestGrave = grave;
-                }
-            }
-        });
-
-        // --- Resource Detection ---
-        let closestResource = null;
-        let minResourceDist = 2;
-        this.game.resourceManager.resources.forEach(resource => {
-            if (resource.mesh.isEnabled()) {
-                const distance = BABYLON.Vector3.Distance(playerPos, resource.mesh.position);
-                if (distance < minResourceDist) {
-                    minResourceDist = distance;
-                    closestResource = resource; // Store the whole resource object
-                }
-            }
-        });
-
-        // --- Tile Unlock Detection ---
-        let closestUnlockableTile = null;
-        let minTileDist = 1.5; // Player must be quite close to unlock
-        const playerTileCoords = this.game.world.getTileCoordinates(playerPos);
-        const neighbors = [{ dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 }];
-        neighbors.forEach(n => {
-            const key = this.game.world.getTileKey(playerTileCoords.x + n.dx, playerTileCoords.z + n.dz);
-            const tile = this.game.world.tiles[key];
-            if (tile && !tile.metadata.unlocked) {
-                const distance = BABYLON.Vector3.Distance(playerPos, tile.position);
-                if (distance < minTileDist) {
-                    minTileDist = distance;
-                    closestUnlockableTile = tile;
-                }
-            }
-        });
-
-        // --- Update State and Highlights ---
-        // Clear previous highlights first
-        if (this.nearbyResource) {
-            this.game.highlightLayer.removeMesh(this.nearbyResource.visualMesh);
-            this.nearbyResource.visualMesh.getChildMeshes(false).forEach(m => this.game.highlightLayer.removeMesh(m));
-        }
-        if (this.nearbyUnlockableTile) this.game.highlightLayer.removeMesh(this.nearbyUnlockableTile);
-        if (this.nearbyGrave) this.game.highlightLayer.removeMesh(this.nearbyGrave);
-
-        // Prioritize grave interaction
-        if (closestGrave) {
-            this.canStartCombat = true;
-            this.nearbyGrave = closestGrave;
-            this.game.highlightLayer.addMesh(this.nearbyGrave, BABYLON.Color3.Red());
-
-            this.canCollect = false;
-            this.nearbyResource = null;
-            this.canUnlock = false;
-            this.nearbyUnlockableTile = null;
-        } else if (closestUnlockableTile) {
-            this.canUnlock = true;
-            this.nearbyUnlockableTile = closestUnlockableTile;
-            this.game.highlightLayer.addMesh(this.nearbyUnlockableTile, BABYLON.Color3.Green());
-
-            this.canCollect = false;
-            this.nearbyResource = null;
-            this.canStartCombat = false;
-            this.nearbyGrave = null;
-        } else if (closestResource) {
-            this.canCollect = true;
-            this.nearbyResource = closestResource;
-            this.game.highlightLayer.addMesh(this.nearbyResource.visualMesh, BABYLON.Color3.Yellow());
-            this.nearbyResource.visualMesh.getChildMeshes(false).forEach(m => this.game.highlightLayer.addMesh(m, BABYLON.Color3.Yellow()));
-
-            this.canUnlock = false;
-            this.nearbyUnlockableTile = null;
-            this.canStartCombat = false;
-            this.nearbyGrave = null;
-        } else {
-            this.canCollect = false;
-            this.nearbyResource = null;
-            this.canUnlock = false;
-            this.nearbyUnlockableTile = null;
-            this.canStartCombat = false;
-            this.nearbyGrave = null;
         }
     }
 

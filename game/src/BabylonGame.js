@@ -6,6 +6,8 @@ import { EnemyManager } from './managers/EnemyManager.js';
 import { ResourceManager } from './managers/ResourceManager.js';
 import { BuildingManager } from './managers/BuildingManager.js';
 import { UI } from './UI.js';
+import { InteractionManager } from './managers/InteractionManager.js';
+import { Interactable } from './babylon/Interactable.js';
 
 // Collision Groups
 export const COLLISION_GROUPS = {
@@ -27,12 +29,14 @@ export class BabylonGame {
         this.enemyManager = null;
         this.resourceManager = null;
         this.buildingManager = null;
+        this.interactionManager = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
         this.highlightLayer = null;
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
         this.graves = [];
+        this.base = null;
 
         this.projectiles = [];
         this.enemyProjectiles = [];
@@ -99,8 +103,9 @@ export class BabylonGame {
         const rockPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "rock-small.glb", this.scene);
         const chickPromise = BABYLON.SceneLoader.LoadAssetContainerAsync("./src/models/", "Chicken_Guy.glb", this.scene);
         const npcPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "character-l.glb", this.scene);
+        const basePromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "Base.glb", this.scene);
 
-        const [rabbitResult, treeResult, rockResult, chickContainer, npcResult] = await Promise.all([rabbitPromise, treePromise, rockPromise, chickPromise, npcPromise]);
+        const [rabbitResult, treeResult, rockResult, chickContainer, npcResult, baseResult] = await Promise.all([rabbitPromise, treePromise, rockPromise, chickPromise, npcPromise, basePromise]);
 
         this.models.player = {
             mesh: rabbitResult.meshes[0],
@@ -129,6 +134,12 @@ export class BabylonGame {
             animationGroups: npcResult.animationGroups
         };
         this.models.npc.mesh.setEnabled(false);
+
+        this.models.base = {
+            mesh: baseResult.meshes[0],
+            animationGroups: baseResult.animationGroups
+        };
+        this.models.base.mesh.setEnabled(false);
     }
 
     createYolkSplatMaterial() {
@@ -196,6 +207,16 @@ export class BabylonGame {
         ground.checkCollisions = false;
         ground.isPickable = true;
 
+        // Player must be created before InteractionManager
+        const playerMesh = this.models.player.mesh.clone("player");
+        playerMesh.setEnabled(true);
+        playerMesh.getChildMeshes().forEach(m => shadowGenerator.addShadowCaster(m, true));
+        this.player = new Player(this, playerMesh, this.scene, this.models.player.animationGroups);
+        this.player.hitbox.position = new BABYLON.Vector3(-0.020527831244813895, 0.504999978542317, -3.7786662465869525); // Player spawn position
+
+        // InteractionManager must be created before World
+        this.interactionManager = new InteractionManager(this);
+
         this.world = new World(this, this.scene);
         this.resourceManager = new ResourceManager(this);
         this.enemyManager = new EnemyManager(this);
@@ -218,13 +239,38 @@ export class BabylonGame {
         this.world.init();
         this.resourceManager.initialize();
 
-        const playerMesh = this.models.player.mesh.clone("player");
-        playerMesh.setEnabled(true);
-        playerMesh.getChildMeshes().forEach(m => shadowGenerator.addShadowCaster(m, true));
-
-        this.player = new Player(this, playerMesh, this.scene, this.models.player.animationGroups);
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
         this.ui.updateResources(this.wood, this.stone);
+
+        // Base visual model
+        this.base = this.models.base.mesh.clone("base");
+        this.base.setEnabled(true);
+        this.base.position = new BABYLON.Vector3(0, 0, 0);
+        this.base.scaling.scaleInPlace(3);
+        this.base.isPickable = false; // Visual mesh is not pickable
+        this.base.getChildMeshes().forEach(m => m.isPickable = false);
+        shadowGenerator.addShadowCaster(this.base, true);
+
+        // Base interaction box
+        const interactionBox = BABYLON.MeshBuilder.CreateBox("baseInteraction", { width: 4, height: 4, depth: 4 }, this.scene);
+        interactionBox.position = this.base.position.clone();
+        interactionBox.isPickable = true;
+        interactionBox.isVisible = false;
+
+        // Attach interactable to the interaction box, but highlight the visual model
+        new Interactable(interactionBox, 5, () => {
+            this.ui.showBaseShopScreen();
+        }, this.base);
+
+        // Base physics collision box
+        const collisionBox = BABYLON.MeshBuilder.CreateBox("baseCollision", {
+            width: 4,
+            height: 4,
+            depth: 4
+        }, this.scene);
+        collisionBox.position = this.base.position.clone();
+        collisionBox.checkCollisions = true;
+        collisionBox.isVisible = false;
 
         this.camera.setTarget(this.player.hitbox.position);
     }
@@ -240,39 +286,25 @@ export class BabylonGame {
     }
 
     setupInputListeners() {
-        // Mouse input
-        this.scene.onPointerObservable.add((pointerInfo) => {
-            if (this.gameState !== 'RUNNING') return;
-
-            switch (pointerInfo.type) {
-                case BABYLON.PointerEventTypes.POINTERMOVE:
-                    // Now handled in the render loop
-                    break;
-                case BABYLON.PointerEventTypes.POINTERDOWN:
-                    if (this.player) {
-                        this.player.attack();
-                    }
-                    break;
-            }
-        });
-
         // Keyboard input
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.togglePause();
             }
-            if (e.key === 'c') {
-                const spawnPosition = this.player.hitbox.position.clone();
-                const backward = this.player.hitbox.getDirection(new BABYLON.Vector3(0, 0, -1));
-                spawnPosition.addInPlace(backward.scale(2));
-                this.buildingManager.createChick('lumberjackChick', spawnPosition);
-            }
         });
     }
 
-    startCombat() {
+    startCombat(grave) {
         if (this.gameMode === 'COMBAT') return;
         console.log("Starting combat...");
+
+        if (grave) {
+            const index = this.graves.indexOf(grave);
+            if (index > -1) {
+                this.graves.splice(index, 1);
+            }
+            grave.dispose();
+        }
 
         this.playerReturnPosition = this.player.hitbox.position.clone();
         this.player.hitbox.position = this.arenaCenter.clone();
@@ -394,42 +426,38 @@ export class BabylonGame {
         }
 
         this.engine.runRenderLoop(() => {
-            if (this.gameState === 'RUNNING') {
-                const delta = this.engine.getDeltaTime() / 1000;
+            const delta = this.engine.getDeltaTime() / 1000;
 
-                // Update mouse position every frame
-                const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
-                if (pickResult.hit) {
-                    this.mousePositionInWorld = pickResult.pickedPoint;
+            if (this.player) {
+                this.player.update(delta);
+                this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
+                this.camera.setTarget(this.player.hitbox.position);
+
+                if (this.player.hitbox.position.y < -10) {
+                    this.gameOver();
                 }
-
-                if (this.player) {
-                    this.player.update(delta);
-                    this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
-                    this.camera.setTarget(this.player.hitbox.position);
-
-                    if (this.player.hitbox.position.y < -10) {
-                        this.gameOver();
-                    }
-                }
-
-                if (this.gameMode === 'COMBAT') {
-                    this.enemyManager.update(delta);
-                }
-                this.resourceManager.update(delta);
-
-                for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                    this.projectiles[i].update(delta);
-                }
-
-                for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
-                    this.enemyProjectiles[i].update(delta);
-                }
-
-                this.buildingManager.chicks.forEach(chick => {
-                    chick.update(delta);
-                });
             }
+
+            if (this.interactionManager) {
+                this.interactionManager.update();
+            }
+
+            if (this.gameMode === 'COMBAT') {
+                this.enemyManager.update(delta);
+            }
+            this.resourceManager.update(delta);
+
+            for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                this.projectiles[i].update(delta);
+            }
+
+            for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+                this.enemyProjectiles[i].update(delta);
+            }
+
+            this.buildingManager.chicks.forEach(chick => {
+                chick.update(delta);
+            });
 
             this.scene.render();
         });

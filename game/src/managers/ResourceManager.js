@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { COLLISION_GROUPS } from '../BabylonGame.js';
+import { Interactable } from '../babylon/Interactable.js';
 
 // Simple class to hold resource data
 class Resource {
@@ -40,7 +41,13 @@ export class ResourceManager {
             const graveMaterial = new BABYLON.StandardMaterial("graveMat", this.scene);
             graveMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.8); // A purplish color
             graveMesh.material = graveMaterial;
-            graveMesh.metadata = { type: 'grave' };
+            graveMesh.checkCollisions = true;
+            graveMesh.isPickable = true;
+
+            new Interactable(graveMesh, 2, () => {
+                this.game.startCombat(graveMesh);
+            });
+
             this.game.graves.push(graveMesh);
             this.game.addShadowCaster(graveMesh);
             return;
@@ -58,6 +65,10 @@ export class ResourceManager {
         }
 
         if (model) {
+            let resource;
+            let interactableMesh;
+            let visualMesh;
+
             if (type === 'rock') {
                 const rockMesh = model.mesh.clone(`rock-visual-${this.resources.length}`);
                 rockMesh.setEnabled(true);
@@ -69,39 +80,37 @@ export class ResourceManager {
                 collisionBox.isVisible = false;
                 collisionBox.checkCollisions = true;
                 collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
+                collisionBox.isPickable = true;
 
                 rockMesh.parent = collisionBox;
                 rockMesh.position.y = -0.4;
 
-                collisionBox.metadata = {
-                    type: 'resource',
-                    resourceType: type,
-                    isTargeted: false
-                };
-
                 this.game.addShadowCaster(rockMesh);
-                const resource = new Resource(collisionBox, type, rockMesh);
-                this.resources.push(resource);
+                resource = new Resource(collisionBox, type, rockMesh);
+                interactableMesh = collisionBox;
+                visualMesh = rockMesh;
             } else { // For trees and other resources
                 const newMesh = model.mesh.clone(`${type}-${this.resources.length}`);
                 newMesh.position = position.clone();
                 newMesh.setEnabled(true);
+                newMesh.isPickable = true;
 
                 newMesh.getChildMeshes().forEach(m => {
                     m.checkCollisions = true;
                     m.collisionGroup = COLLISION_GROUPS.WALL;
                 });
 
-                newMesh.metadata = {
-                    type: 'resource',
-                    resourceType: type,
-                    isTargeted: false
-                };
-
                 this.game.addShadowCaster(newMesh);
-                const resource = new Resource(newMesh, type);
-                this.resources.push(resource);
+                resource = new Resource(newMesh, type);
+                interactableMesh = newMesh;
+                visualMesh = newMesh;
             }
+
+            this.resources.push(resource);
+
+            new Interactable(interactableMesh, 2, () => {
+                this.harvestResource(resource);
+            }, visualMesh);
         }
     }
 
@@ -111,23 +120,27 @@ export class ResourceManager {
             const item = this.respawnQueue[i];
             if (now >= item.respawnTime) {
                 const resource = item.resource;
-                resource.mesh.position = resource.initialPosition;
                 resource.mesh.setEnabled(true);
-                resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = true);
-                resource.mesh.metadata.isTargeted = false;
+                if (resource.type === 'rock') {
+                    resource.mesh.checkCollisions = true;
+                } else {
+                    resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = true);
+                }
                 this.respawnQueue.splice(i, 1);
             }
         }
     }
 
-    harvestResource(resourceMesh) {
-        const resource = this.resources.find(r => r.mesh === resourceMesh);
+    harvestResource(resource) {
         if (resource && resource.mesh.isEnabled()) {
             resource.mesh.setEnabled(false);
-            resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = false);
+            if (resource.type === 'rock') {
+                resource.mesh.checkCollisions = false;
+            } else {
+                resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = false);
+            }
             this.respawnQueue.push({ resource: resource, respawnTime: Date.now() + this.respawnTime });
-            return resource.type;
+            this.game.addResource(resource.type, 1);
         }
-        return null;
     }
 }

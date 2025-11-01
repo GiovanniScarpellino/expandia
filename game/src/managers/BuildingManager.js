@@ -36,8 +36,11 @@ export class BuildingManager {
         this.game.addResource('tree', -cost.wood);
         this.game.addResource('rock', -cost.stone);
 
+        // Fixed spawn position in front of the base
+        const spawnPosition = position.add(new BABYLON.Vector3(0, 0.5, -3));
+
         if (chickType === 'lumberjackChick') {
-            const newChick = new LumberjackChick(this.game, position);
+            const newChick = new LumberjackChick(this.game, spawnPosition);
             this.chicks.push(newChick);
             console.log("A new lumberjack chick has been created!");
         }

@@ -22,6 +22,9 @@ export class UI {
         this.pauseScreen = document.getElementById('pause-screen');
         this.levelUpScreen = document.getElementById('levelup-screen');
         this.upgradeCardsContainer = document.getElementById('upgrade-cards-container');
+        this.baseShopScreen = document.getElementById('base-shop-screen');
+        this.shopItemsContainer = document.getElementById('shop-items-container');
+        this.closeShopButton = document.getElementById('close-shop-button');
 
         // Initial state
         this.updateHealth(100, 100);
@@ -29,6 +32,8 @@ export class UI {
         this.updateWaveStats(0, 0);
         this.updateResources(0, 0);
         this.waveStats.style.display = 'none';
+
+        this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
     }
 
     togglePauseScreen(show) {
@@ -59,6 +64,38 @@ export class UI {
 
     hideLevelUpScreen() {
         this.levelUpScreen.style.display = 'none';
+    }
+
+    showBaseShopScreen() {
+        this.populateShop();
+        this.baseShopScreen.style.display = 'flex';
+        this.game.gameState = 'PAUSED';
+    }
+
+    hideBaseShopScreen() {
+        this.baseShopScreen.style.display = 'none';
+        this.game.gameState = 'RUNNING';
+    }
+
+    populateShop() {
+        this.shopItemsContainer.innerHTML = '';
+        const items = [
+            { id: 'lumberjackChick', name: 'Poussin Bûcheron', cost: { wood: 10, stone: 0 } },
+        ];
+
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'shop-item';
+            itemDiv.innerHTML = `
+                <span>${item.name}</span>
+                <span>Coût: ${item.cost.wood} bois</span>
+                <button>Acheter</button>
+            `;
+            itemDiv.querySelector('button').addEventListener('click', () => {
+                this.game.buildingManager.createChick(item.id, this.game.base.position);
+            });
+            this.shopItemsContainer.appendChild(itemDiv);
+        });
     }
 
     updateHealth(currentHealth, maxHealth) {

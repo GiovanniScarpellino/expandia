@@ -152,10 +152,7 @@ export class NPC {
 
     finishGathering() {
         if (this.target) {
-            const resourceType = this.game.resourceManager.harvestResource(this.target.mesh);
-            if (resourceType) {
-                this.game.addResource(resourceType, 1);
-            }
+            this.game.resourceManager.harvestResource(this.target);
             if (this.target.mesh.metadata) {
                 this.target.mesh.metadata.isTargeted = false;
             }

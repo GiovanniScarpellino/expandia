@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { COLLISION_GROUPS } from '../BabylonGame.js';
+import { Interactable } from './Interactable.js';
 
 export class World {
     constructor(game, scene) {
@@ -18,9 +19,9 @@ export class World {
     }
 
     init() {
-        // Create a larger 5x5 starting area
-        for (let x = -2; x <= 2; x++) {
-            for (let z = -2; z <= 2; z++) {
+        // Create a larger 7x7 starting area
+        for (let x = -3; x <= 3; x++) {
+            for (let z = -3; z <= 3; z++) {
                 this.unlockTile(x, z, false); // Unlock initial tiles without cost
             }
         }
@@ -57,8 +58,6 @@ export class World {
         if (withCost && Math.random() < 0.3) { // 30% chance
             this.game.resourceManager.spawnResource(targetTile.position);
         }
-
-
     }
 
     createNeighboringLockedTiles(x, z) {
@@ -124,6 +123,13 @@ export class World {
             if (unlocked && !this.tiles[key].metadata.unlocked) {
                 this.tiles[key].material = this.unlockedMaterial;
                 this.tiles[key].metadata.unlocked = true;
+                this.tiles[key].isPickable = false;
+                if (this.tiles[key].interactable) {
+                    if (this.game.interactionManager.currentTarget === this.tiles[key].interactable) {
+                        this.game.interactionManager.clearTarget();
+                    }
+                    this.tiles[key].interactable = null;
+                }
             }
             return this.tiles[key];
         }
@@ -140,6 +146,13 @@ export class World {
 
         tile.metadata = { type: 'tile', unlocked, x, z };
         this.tiles[key] = tile;
+
+        if (!unlocked) {
+            tile.isPickable = true;
+            new Interactable(tile, 3, () => {
+                this.unlockTile(x, z, true);
+            });
+        }
 
         return tile;
     }
