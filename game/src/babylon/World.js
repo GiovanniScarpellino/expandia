@@ -28,8 +28,6 @@ export class World {
         }
 
         // Guarantee some starting resources
-        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(1, 1)].position, 'tree');
-        this.game.resourceManager.spawnResource(this.tiles[this.getTileKey(-1, -1)].position, 'rock');
     }
 
     unlockTile(x, z, withCost = true) {
