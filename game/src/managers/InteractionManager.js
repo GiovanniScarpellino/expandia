@@ -73,6 +73,11 @@ export class InteractionManager {
 
         this.clearTarget();
         this.currentTarget = interactable;
+
+        if (this.currentTarget.visualMesh.metadata && this.currentTarget.visualMesh.metadata.isHighlightMesh) {
+            this.currentTarget.visualMesh.isVisible = true;
+        }
+
         this.highlightLayer.addMesh(this.currentTarget.visualMesh, BABYLON.Color3.Green());
         this.currentTarget.visualMesh.getChildMeshes().forEach(m => {
             this.highlightLayer.addMesh(m, BABYLON.Color3.Green());
@@ -86,6 +91,11 @@ export class InteractionManager {
         this.currentTarget.visualMesh.getChildMeshes().forEach(m => {
             this.highlightLayer.removeMesh(m);
         });
+
+        if (this.currentTarget.visualMesh.metadata && this.currentTarget.visualMesh.metadata.isHighlightMesh) {
+            this.currentTarget.visualMesh.isVisible = false;
+        }
+
         this.currentTarget = null;
     }
 

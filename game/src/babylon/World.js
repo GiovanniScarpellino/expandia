@@ -128,6 +128,7 @@ export class World {
                     if (this.game.interactionManager.currentTarget === this.tiles[key].interactable) {
                         this.game.interactionManager.clearTarget();
                     }
+                    this.tiles[key].interactable.visualMesh.dispose(); // Dispose of the highlight box
                     this.tiles[key].interactable = null;
                 }
             }
@@ -149,9 +150,22 @@ export class World {
 
         if (!unlocked) {
             tile.isPickable = true;
+
+            // Create a highlight mesh for better visibility
+            const highlightBox = BABYLON.MeshBuilder.CreateBox(`highlight-${key}`, { 
+                width: this.tileSize * 0.9, 
+                depth: this.tileSize * 0.9, 
+                height: 0.1 
+            }, this.scene);
+            highlightBox.position = tile.position.clone();
+            highlightBox.position.y += 0.05;
+            highlightBox.isPickable = false;
+            highlightBox.isVisible = false; // Initially invisible
+            highlightBox.metadata = { isHighlightMesh: true }; // Add metadata
+
             new Interactable(tile, 3, () => {
                 this.unlockTile(x, z, true);
-            });
+            }, highlightBox);
         }
 
         return tile;
