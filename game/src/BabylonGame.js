@@ -5,6 +5,7 @@ import { World } from './babylon/World.js';
 import { EnemyManager } from './managers/EnemyManager.js';
 import { ResourceManager } from './managers/ResourceManager.js';
 import { BuildingManager } from './managers/BuildingManager.js';
+import { UpgradeManager } from './managers/UpgradeManager.js';
 import { UI } from './UI.js';
 import { InteractionManager } from './managers/InteractionManager.js';
 import { Interactable } from './babylon/Interactable.js';
@@ -29,6 +30,7 @@ export class BabylonGame {
         this.enemyManager = null;
         this.resourceManager = null;
         this.buildingManager = null;
+        this.upgradeManager = null;
         this.interactionManager = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
@@ -217,13 +219,13 @@ export class BabylonGame {
         this.player = new Player(this, playerMesh, this.scene, this.models.player.animationGroups);
         this.player.hitbox.position = new BABYLON.Vector3(-0.020527831244813895, 0.504999978542317, -3.7786662465869525); // Player spawn position
 
-        // InteractionManager must be created before World
+        // Managers
         this.interactionManager = new InteractionManager(this);
-
         this.world = new World(this, this.scene);
         this.resourceManager = new ResourceManager(this);
         this.enemyManager = new EnemyManager(this);
         this.buildingManager = new BuildingManager(this);
+        this.upgradeManager = new UpgradeManager(this);
 
         // Create the combat arena using the world tile system
         const arenaRadius = 4; // Creates a 9x9 area

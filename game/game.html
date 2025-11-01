@@ -1,92 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="stylesheet" href="/src/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expandia</title>
-  </head>
-  <body>
-    <div id="loading-screen">
-      <div class="spinner"></div>
-      <p>Chargement...</p>
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+    <div id="loading-screen" class="fullscreen-overlay">
+        <div class="spinner"></div>
+        <p>Chargement du monde...</p>
     </div>
 
-    <!-- Base Shop Screen -->
+    <div id="hud">
+        <div id="resource-stats" class="hud-panel">
+            <div id="wood-counter">Bois: 0</div>
+            <div id="stone-counter">Pierre: 0</div>
+            <div id="gold-counter">Or: 0</div>
+        </div>
+
+        <div id="objective-display" class="hud-panel">
+            <span id="objective-text">Objectif: 0/5 fragments</span>
+        </div>
+
+        <div id="wave-stats" class="hud-panel">
+            <div id="wave-counter">Manche: 1</div>
+            <div id="enemy-counter">Ennemis: 10</div>
+        </div>
+
+        <div id="player-stats">
+            <div class="health-bar-container">
+                <div id="health-bar-fill"></div>
+                <span id="health-text">100 / 100</span>
+            </div>
+            <div class="xp-bar-container">
+                <div id="xp-bar-fill"></div>
+                <span id="level-text">Niv. 1</span>
+            </div>
+        </div>
+
+        <a href="#" id="help-link">?</a>
+    </div>
+
+    <div id="game-over-screen" class="fullscreen-overlay" style="display: none;">
+        <div class="overlay-content">
+            <h1>GAME OVER</h1>
+            <p>Le cœur a été détruit. Votre progression a été réinitialisée.</p>
+            <button onclick="window.location.reload()">Recommencer</button>
+        </div>
+    </div>
+
+    <div id="pause-screen" class="fullscreen-overlay" style="display: none;">
+        <div class="overlay-content">
+            <h1>PAUSE</h1>
+            <p>Le jeu est en pause. Appuyez sur 'Echap' pour reprendre.</p>
+        </div>
+    </div>
+
+    <div id="levelup-screen" class="fullscreen-overlay" style="display: none;">
+        <div class="overlay-content">
+            <h1>NIVEAU SUPÉRIEUR !</h1>
+            <p>Choisissez une amélioration pour continuer.</p>
+            <div id="upgrade-cards-container"></div>
+        </div>
+    </div>
+
     <div id="base-shop-screen" class="fullscreen-overlay" style="display: none;">
         <div class="overlay-content">
             <h1>Base</h1>
-            <p>Acheter des unités</p>
             <div id="shop-items-container"></div>
             <button id="close-shop-button">Fermer</button>
         </div>
     </div>
 
-    <!-- Level Up Screen -->
-    <div id="levelup-screen" class="fullscreen-overlay" style="display: none;">
-        <div class="overlay-content">
-          <h1>Niveau Supérieur !</h1>
-          <p>Choisissez une amélioration :</p>
-          <div id="upgrade-cards-container"></div>
-        </div>
-    </div>
+    <div id="toast-container"></div>
 
-    <!-- Pause Screen -->
-    <div id="pause-screen" class="fullscreen-overlay" style="display: none;">
-      <div class="overlay-content">
-        <h1>Pause</h1>
-      </div>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div id="game-over-screen" class="fullscreen-overlay" style="display: none;">
-      <div class="overlay-content">
-        <h1>Connexion Perdue</h1>
-        <p>Le Poussin a été corrompu.</p>
-        <button onclick="window.location.reload()">Réessayer</button>
-      </div>
-    </div>
-
-    <!-- HUD -->
-    <div id="hud">
-      <div id="resource-stats" class="hud-panel">
-        <div id="wood-counter">Bois: 0</div>
-        <div id="stone-counter">Pierre: 0</div>
-        <div id="gold-counter">Or: 0</div>
-      </div>
-
-      <div id="objective-display" class="hud-panel">
-        <span id="objective-text">Objectif: Réparer le Cœur (0 / 5)</span>
-      </div>
-
-      <div id="wave-stats" class="hud-panel">
-        <div id="wave-counter">Manche: 0</div>
-        <div id="enemy-counter">Ennemis: 0</div>
-      </div>
-
-      <div id="player-stats" class="hud-panel">
-        <div class="health-bar-container">
-            <div id="health-bar-fill"></div>
-            <span id="health-text">100 / 100</span>
-        </div>
-        <div class="xp-bar-container">
-            <div id="xp-bar-fill"></div>
-            <span id="level-text">Niv. 1</span>
-        </div>
-      </div>
-      
-      <a id="help-link" href="./index.html"><i class="fas fa-question-circle"></i></a>
-    </div>
-
-    <!-- Mobile Controls -->
     <div id="mobile-controls">
-      <div id="joystick-area">
-        <div id="joystick"></div>
-      </div>
+        <div id="joystick-area">
+            <div id="joystick"></div>
+        </div>
     </div>
 
     <script type="module" src="/src/main.js"></script>
-  </body>
+</body>
 </html>

@@ -1,5 +1,4 @@
 import * as BABYLON from '@babylonjs/core';
-import { Wall } from '../babylon/Wall.js';
 import { LumberjackChick } from '../babylon/LumberjackChick.js';
 import { MinerChick } from '../babylon/MinerChick.js';
 
@@ -7,257 +6,32 @@ export class BuildingManager {
     constructor(game) {
         this.game = game;
         this.scene = game.scene;
-
-        // State
-        this.isBuildingMode = false;
-        this.isPlacing = false;
-        this.currentItemType = null;
-        this.canPlace = false;
-        this.buildings = []; // Keep track of all buildings
-        this.chicks = []; // Keep track of all chicks
-
-        // Ghost Mesh
-        this.ghostMesh = null;
-        this.placementRotation = 0;
-
-        // Costs
-        this.itemCosts = {
-            wall: { wood: 5, stone: 0 },
-            lumberjackChick: { wood: 10, stone: 0 },
-            minerChick: { wood: 0, stone: 10 }
-        };
+        this.chicks = [];
     }
 
     createLumberjackChick() {
-        const cost = this.itemCosts.lumberjackChick;
-        if (this.game.wood < cost.wood) {
-            console.log("Not enough wood to create a lumberjack chick.");
-            return;
+        const cost = 10;
+        if (this.game.wood >= cost) {
+            this.game.addResource('tree', -cost);
+            const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(2, 0, -2));
+            const chick = new LumberjackChick(this.game, spawnPosition);
+            this.chicks.push(chick);
+            return true;
+        } else {
+            return false;
         }
-
-        this.game.addResource('tree', -cost.wood);
-
-        const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(2, 0.5, -2));
-        const newChick = new LumberjackChick(this.game, spawnPosition);
-        this.chicks.push(newChick);
-        console.log("A new lumberjack chick has been created!");
     }
 
     createMinerChick() {
-        const cost = this.itemCosts.minerChick;
-        if (this.game.stone < cost.stone) {
-            console.log("Not enough stone to create a miner chick.");
-            return;
-        }
-
-        this.game.addResource('rock', -cost.stone);
-
-        const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(-2, 0.5, -2));
-        const newChick = new MinerChick(this.game, spawnPosition);
-        this.chicks.push(newChick);
-        console.log("A new miner chick has been created!");
-    }
-
-    dispose() {
-        // No persistent listeners to clean up anymore
-    }
-
-    toggleBuildMode(isOpen) {
-        this.isBuildingMode = isOpen;
-        this.game.setPaused(isOpen);
-
-        if (isOpen) {
-            this.game.canvas.focus();
-            this.game.freeCameraTarget.copyFrom(this.game.player.hitbox.position);
+        const cost = 10;
+        if (this.game.stone >= cost) {
+            this.game.addResource('rock', -cost);
+            const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(-2, 0, -2));
+            const chick = new MinerChick(this.game, spawnPosition);
+            this.chicks.push(chick);
+            return true;
         } else {
-            this.cancelPlacement();
-        }
-    }
-
-    selectItemToPlace(itemType) {
-        if (!this.isBuildingMode || this.isPlacing) return;
-
-        const cost = this.itemCosts[itemType];
-        if (this.game.wood < cost.wood || this.game.stone < cost.stone) {
-            console.log("Not enough resources.");
-            return;
-        }
-
-        this.isPlacing = true;
-        this.currentItemType = itemType;
-        this.createGhostMesh(itemType);
-        this.game.ui.buildMenu.style.display = 'none'; // Just hide the menu
-    }
-
-    cancelPlacement() {
-        if (!this.isPlacing) return;
-        this.isPlacing = false;
-        this.currentItemType = null;
-        this.destroyGhostMesh();
-        if (this.isBuildingMode) {
-            this.game.ui.buildMenu.style.display = 'block'; // Show menu again
-        }
-    }
-
-    confirmPlacement() {
-        if (!this.isPlacing || !this.canPlace) {
-            return;
-        }
-
-        const cost = this.itemCosts[this.currentItemType];
-        if (this.game.wood >= cost.wood && this.game.stone >= cost.stone) {
-            this.game.addResource('tree', -cost.wood);
-            this.game.addResource('rock', -cost.stone);
-
-            if (this.currentItemType === 'wall') {
-                const newWall = new Wall(this, this.ghostMesh.position.clone(), this.ghostMesh.rotationQuaternion.clone());
-                this.game.addShadowCaster(newWall.mesh);
-                this.buildings.push(newWall);
-
-                // Block the pathfinding edge
-                const wallPosition = this.ghostMesh.position;
-                const halfTile = this.game.world.tileSize / 2;
-
-                const x_is_edge = (Math.abs(Math.round(wallPosition.x / halfTile)) % 2) !== 0;
-                const z_is_edge = (Math.abs(Math.round(wallPosition.z / halfTile)) % 2) !== 0;
-
-                let tile1_coords = null;
-                let tile2_coords = null;
-
-                if (x_is_edge && !z_is_edge) { // Vertical wall
-                    tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x - 0.1, 0, wallPosition.z));
-                    tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x + 0.1, 0, wallPosition.z));
-                } else if (!x_is_edge && z_is_edge) { // Horizontal wall
-                    tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x, 0, wallPosition.z - 0.1));
-                    tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(wallPosition.x, 0, wallPosition.z + 0.1));
-                }
-
-                if (tile1_coords && tile2_coords) {
-                    const key1 = this.game.world.getTileKey(tile1_coords.x, tile1_coords.z);
-                    const key2 = this.game.world.getTileKey(tile2_coords.x, tile2_coords.z);
-
-                    const edgeKey = [key1, key2].sort().join('_');
-                    
-                    if (!this.game.world.blockedEdges) {
-                        this.game.world.blockedEdges = new Set();
-                    }
-                    this.game.world.blockedEdges.add(edgeKey);
-                }
-
-            }
-            
-            console.log(`${this.currentItemType} placed.`);
-        } else {
-            console.log("Not enough resources!");
-        }
-        
-        this.cancelPlacement(); // End placement after one build
-    }
-
-    removeBuilding(buildingToRemove) {
-        const index = this.buildings.indexOf(buildingToRemove);
-        if (index > -1) {
-            this.buildings.splice(index, 1);
-        }
-    }
-
-    // This is now called from BabylonGame's central key listener
-    handlePlacementKeyPress(e) {
-        if (this.currentItemType === 'wall') {
-            if (e.key === 'r' || e.key === 'R') {
-                this.placementRotation += Math.PI / 2;
-                this.updateGhostMeshPosition(); // Update ghost immediately
-                e.preventDefault();
-            }
-        }
-        if (e.key === 'Escape') {
-            this.cancelPlacement();
-            e.preventDefault();
-        }
-    }
-
-    createGhostMesh(itemType) {
-        if (this.ghostMesh) this.ghostMesh.dispose();
-
-        if (itemType === 'wall') {
-            this.ghostMesh = BABYLON.MeshBuilder.CreateBox("ghostWall", { width: 2, height: 1, depth: 0.2 }, this.scene);
-        }
-        
-        if (this.ghostMesh) {
-            const ghostMat = new BABYLON.StandardMaterial("ghostMat", this.scene);
-            ghostMat.alpha = 0.5;
-            this.ghostMesh.material = ghostMat;
-            this.ghostMesh.isPickable = false;
-            this.updateGhostMeshPosition(); // Initial position update
-        }
-    }
-
-    destroyGhostMesh() {
-        if (this.ghostMesh) {
-            this.ghostMesh.dispose();
-            this.ghostMesh = null;
-        }
-    }
-
-    updateGhostMeshPosition() {
-        if (!this.isPlacing || !this.ghostMesh) return;
-
-        const pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-
-        if (pickInfo.hit) {
-            const pickPoint = pickInfo.pickedPoint;
-            
-            if (this.currentItemType === 'wall') {
-                this.updateWallGhost(pickPoint);
-            }
-        } else {
-            this.canPlace = false;
-            if (this.ghostMesh) {
-                this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
-            }
-        }
-    }
-
-    updateWallGhost(pickPoint) {
-        const tileSize = this.game.world.tileSize;
-        const halfTile = tileSize / 2;
-
-        const snappedX = Math.round(pickPoint.x / halfTile) * halfTile;
-        const snappedZ = Math.round(pickPoint.z / halfTile) * halfTile;
-        const snappedPosition = new BABYLON.Vector3(snappedX, 0.5, snappedZ);
-        
-        this.ghostMesh.position = snappedPosition;
-        this.ghostMesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(0, this.placementRotation, 0);
-
-        // Validity Check for walls (on edges)
-        const x_is_edge = (Math.abs(Math.round(snappedX / halfTile)) % 2) !== 0;
-        const z_is_edge = (Math.abs(Math.round(snappedZ / halfTile)) % 2) !== 0;
-
-        let tile1_coords = null;
-        let tile2_coords = null;
-
-        if (x_is_edge && !z_is_edge) { // Vertical edge
-            tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX - 0.1, 0, snappedZ));
-            tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX + 0.1, 0, snappedZ));
-        } else if (!x_is_edge && z_is_edge) { // Horizontal edge
-            tile1_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX, 0, snappedZ - 0.1));
-            tile2_coords = this.game.world.getTileCoordinates(new BABYLON.Vector3(snappedX, 0, snappedZ + 0.1));
-        }
-
-        if (tile1_coords && tile2_coords) {
-            const tile1 = this.game.world.tiles[this.game.world.getTileKey(tile1_coords.x, tile1_coords.z)];
-            const tile2 = this.game.world.tiles[this.game.world.getTileKey(tile2_coords.x, tile2_coords.z)];
-
-            if ((tile1 && tile1.metadata.unlocked) || (tile2 && tile2.metadata.unlocked)) {
-                this.canPlace = true;
-                this.ghostMesh.material.emissiveColor = BABYLON.Color3.Green();
-            } else {
-                this.canPlace = false;
-                this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
-            }
-        } else {
-            this.canPlace = false;
-            this.ghostMesh.material.emissiveColor = BABYLON.Color3.Red();
+            return false;
         }
     }
 }

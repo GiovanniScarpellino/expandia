@@ -29,6 +29,7 @@ export class UI {
         this.baseShopScreen = document.getElementById('base-shop-screen');
         this.shopItemsContainer = document.getElementById('shop-items-container');
         this.closeShopButton = document.getElementById('close-shop-button');
+        this.toastContainer = document.getElementById('toast-container');
 
         // Initial state
         this.updateHealth(100, 100);
@@ -84,23 +85,96 @@ export class UI {
 
     populateShop() {
         this.shopItemsContainer.innerHTML = '';
-        const items = [
+
+        // --- Units Section ---
+        const unitsHeader = document.createElement('h3');
+        unitsHeader.className = 'shop-section-header';
+        unitsHeader.innerText = 'Unités';
+        this.shopItemsContainer.appendChild(unitsHeader);
+
+        const units = [
             { id: 'lumberjackChick', name: 'Poussin Bûcheron', cost: { wood: 10, stone: 0 }, action: () => this.game.buildingManager.createLumberjackChick() },
             { id: 'minerChick', name: 'Poussin Mineur', cost: { wood: 0, stone: 10 }, action: () => this.game.buildingManager.createMinerChick() },
         ];
 
-        items.forEach(item => {
+        units.forEach(item => {
             const costText = item.cost.wood > 0 ? `${item.cost.wood} bois` : `${item.cost.stone} pierre`;
             const itemDiv = document.createElement('div');
             itemDiv.className = 'shop-item';
             itemDiv.innerHTML = `
                 <span>${item.name}</span>
-                <span>Coût: ${costText}</span>
-                <button>Acheter</button>
+                <div class="shop-action">
+                    <span>Coût: ${costText}</span>
+                    <button>Acheter</button>
+                </div>
             `;
-            itemDiv.querySelector('button').addEventListener('click', item.action);
+            itemDiv.querySelector('button').addEventListener('click', () => {
+                const success = item.action();
+                if (success) {
+                    this.showToast(`${item.name} acheté !`);
+                } else {
+                    const costType = item.cost.wood > 0 ? 'bois' : 'pierre';
+                    this.showToast(`Pas assez de ${costType}.`);
+                }
+            });
             this.shopItemsContainer.appendChild(itemDiv);
         });
+
+        // --- Upgrades Section ---
+        const upgradesHeader = document.createElement('h3');
+        upgradesHeader.className = 'shop-section-header';
+        upgradesHeader.innerText = 'Améliorations';
+        this.shopItemsContainer.appendChild(upgradesHeader);
+
+        const allUpgrades = this.game.upgradeManager.upgrades;
+
+        for (const id in allUpgrades) {
+            const upgrade = allUpgrades[id];
+            if (!upgrade.isImplemented) continue;
+
+            const currentLevel = this.game.upgradeManager.getUpgradeLevel(id);
+            const cost = this.game.upgradeManager.getUpgradeCost(id);
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'shop-item upgrade-item';
+
+            let costText = 'Max';
+            if (cost !== Infinity) {
+                const costType = upgrade.costType === 'wood' ? 'bois' : upgrade.costType === 'stone' ? 'pierre' : 'or';
+                costText = `${cost} ${costType}`;
+            }
+
+            itemDiv.innerHTML = `
+                <div class="upgrade-info">
+                    <h4>${upgrade.name} <span>(Niv. ${currentLevel} / ${upgrade.maxLevel})</span></h4>
+                    <p>${upgrade.description}</p>
+                </div>
+                <div class="shop-action">
+                    <span>Coût: ${costText}</span>
+                    <button ${cost === Infinity ? 'disabled' : ''}>Acheter</button>
+                </div>
+            `;
+
+            if (cost !== Infinity) {
+                itemDiv.querySelector('button').addEventListener('click', () => {
+                    this.game.upgradeManager.buyUpgrade(id);
+                });
+            }
+
+            this.shopItemsContainer.appendChild(itemDiv);
+        }
+    }
+
+    showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerText = message;
+        this.toastContainer.appendChild(toast);
+
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
     }
 
     updateHealth(currentHealth, maxHealth) {

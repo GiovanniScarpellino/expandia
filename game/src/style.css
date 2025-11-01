@@ -31,11 +31,18 @@ canvas {
 
 .overlay-content {
     text-align: center;
+    background-color: #1e1e1e;
+    padding: 25px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px; /* Reduced width */
+    box-shadow: 0 5px 25px rgba(0,0,0,0.7);
 }
 
 .overlay-content h1 {
-    font-size: 3em;
+    font-size: 2.5em; /* Reduced font size */
     color: #e74c3c;
+    margin-top: 0;
 }
 
 #levelup-screen h1 {
@@ -44,7 +51,7 @@ canvas {
 
 .overlay-content button {
     background-color: #00BFA6;
-    padding: 14px 40px;
+    padding: 12px 30px;
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -211,6 +218,109 @@ canvas {
 .upgrade-card p {
     font-size: 0.9em;
     color: #ecf0f1;
+}
+
+/* --- Shop Screen --- */
+.shop-section-header {
+    color: #3498db;
+    font-size: 1.4em;
+    text-align: left;
+    margin-top: 20px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+#shop-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Reduced gap */
+    max-height: 350px; /* Reduced height */
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.shop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2c3e50;
+    padding: 12px; /* Reduced padding */
+    border-radius: 8px;
+}
+
+.upgrade-item {
+    flex-wrap: wrap;
+}
+
+.upgrade-info {
+    flex-basis: 65%;
+    text-align: left;
+}
+
+.upgrade-info h4 {
+    margin: 0 0 5px 0;
+    color: #f1c40f;
+    font-size: 1em; /* Reduced font size */
+}
+.upgrade-info h4 span {
+    color: #bdc3c7;
+    font-size: 0.8em;
+}
+
+.upgrade-info p {
+    margin: 0;
+    font-size: 0.85em; /* Reduced font size */
+    color: #ecf0f1;
+}
+
+.shop-action {
+    flex-basis: 30%;
+    text-align: right;
+}
+
+.shop-action span {
+    display: block;
+    margin-bottom: 8px; /* Reduced margin */
+    font-size: 0.9em;
+}
+
+.shop-action button {
+    margin: 0;
+    padding: 8px 15px; /* Reduced padding */
+    font-size: 0.9em;
+}
+
+/* --- Toast Notifications --- */
+#toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background-color: rgba(52, 152, 219, 0.9);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    animation: fadein 0.5s forwards, fadeout 0.5s 2.5s forwards;
+}
+
+@keyframes fadein {
+    from { bottom: 0; opacity: 0; }
+    to { bottom: 20px; opacity: 1; }
+}
+
+@keyframes fadeout {
+    from { bottom: 20px; opacity: 1; }
+    to { bottom: 50px; opacity: 0; }
 }
 
 
