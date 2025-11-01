@@ -23,7 +23,7 @@ export class InteractionManager {
         if (this.currentTarget) {
             this.currentTarget.onInteract();
         } 
-        // In combat mode, if there is no interactable target, the player attacks in the direction of the mouse.
+        // In combat mode, if there is no interactable target, the player attacks in the direction of the.mouse.
         else if (this.game.gameMode === 'COMBAT') {
             this.player.attack();
         }
@@ -46,10 +46,7 @@ export class InteractionManager {
         this.clearTarget();
         this.currentTarget = interactable;
 
-        if (this.currentTarget.visualMesh.metadata && this.currentTarget.visualMesh.metadata.isHighlightMesh) {
-            this.currentTarget.visualMesh.isVisible = true;
-        }
-
+        // Add the visual mesh and its children to the highlight layer
         this.highlightLayer.addMesh(this.currentTarget.visualMesh, BABYLON.Color3.Green());
         this.currentTarget.visualMesh.getChildMeshes().forEach(m => {
             this.highlightLayer.addMesh(m, BABYLON.Color3.Green());
@@ -59,14 +56,11 @@ export class InteractionManager {
     clearTarget() {
         if (!this.currentTarget) return;
 
+        // Remove the visual mesh and its children from the highlight layer
         this.highlightLayer.removeMesh(this.currentTarget.visualMesh);
         this.currentTarget.visualMesh.getChildMeshes().forEach(m => {
             this.highlightLayer.removeMesh(m);
         });
-
-        if (this.currentTarget.visualMesh.metadata && this.currentTarget.visualMesh.metadata.isHighlightMesh) {
-            this.currentTarget.visualMesh.isVisible = false;
-        }
 
         this.currentTarget = null;
     }
@@ -91,7 +85,9 @@ export class InteractionManager {
 
         if (potentialTarget) {
             this.setTarget(potentialTarget);
-        } else {
+        }
+
+        else {
             this.clearTarget();
         }
     }

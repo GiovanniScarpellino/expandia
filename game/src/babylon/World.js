@@ -167,18 +167,6 @@ export class World {
         const shouldBeInteractable = this.isAdjacentToUnlocked(x, z);
 
         if (shouldBeInteractable && !tile.metadata.interactable) {
-            // Add interactable
-            const highlightBox = BABYLON.MeshBuilder.CreateBox(`highlight-${key}`, {
-                width: this.tileSize * 0.9, 
-                depth: this.tileSize * 0.9, 
-                height: 0.1 
-            }, this.scene);
-            highlightBox.position = tile.position.clone();
-            highlightBox.position.y = 0.5; // Adjusted Y position
-            highlightBox.isPickable = false;
-            highlightBox.isVisible = false; // Hide for final version
-            highlightBox.metadata = { isHighlightMesh: true };
-
             const interactionBox = BABYLON.MeshBuilder.CreateBox(`interaction-${key}`, {
                 width: this.tileSize,
                 depth: this.tileSize,
@@ -191,7 +179,7 @@ export class World {
 
             tile.metadata.interactable = new Interactable(interactionBox, 3, () => {
                 this.unlockTile(x, z, true);
-            }, highlightBox);
+            }, tile); // Pass the tile itself as the visualMesh
 
         } else if (!shouldBeInteractable && tile.metadata.interactable) {
             // Remove interactable
@@ -199,7 +187,7 @@ export class World {
                 this.game.interactionManager.clearTarget();
             }
             tile.metadata.interactable.mesh.dispose(); // dispose interactionBox
-            tile.metadata.interactable.visualMesh.dispose(); // dispose highlightBox
+            // No visualMesh disposal needed if it's the tile itself
             tile.metadata.interactable = null;
         }
     }
@@ -221,7 +209,7 @@ export class World {
                         this.game.interactionManager.clearTarget();
                     }
                     existingTile.metadata.interactable.mesh.dispose();
-                    existingTile.metadata.interactable.visualMesh.dispose();
+                    // No visualMesh disposal needed if it's the tile itself
                     existingTile.metadata.interactable = null;
                 }
             }
