@@ -69,6 +69,14 @@ export class NPC {
         } else {
             switch (this.state) {
                 case 'MOVING_TO_RESOURCE':
+                    // Check if target is still valid
+                    if (!this.target || !this.target.mesh || !this.target.mesh.isEnabled()) {
+                        this.state = 'IDLE';
+                        this.path = [];
+                        this.target = null;
+                        this.idleSearchTimer = this.idleSearchCooldown; // Force immediate search
+                        return;
+                    }
                     this.handleMoveState(delta, 'GATHERING');
                     break;
                 case 'GATHERING':

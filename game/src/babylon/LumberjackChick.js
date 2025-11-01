@@ -54,8 +54,11 @@ export class LumberjackChick extends NPC {
             }
         }
 
-        // Use the idle animation for the gathering state as a fallback
-        if (this.animations.idle) {
+        // Use the grounded animation for the gathering state
+        if (this.animations.grounded) {
+            this.animations.gathering = this.animations.grounded;
+        } else if (this.animations.idle) {
+            // Fallback to idle if grounded is not available
             this.animations.gathering = this.animations.idle;
         }
     }
