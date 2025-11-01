@@ -5,7 +5,8 @@ import { Projectile } from './Projectile.js';
 const ANIMATIONS_NAME = {
     IDLE: 'idle',
     RUN: 'run',
-    ATTACK: 'punch'
+    ATTACK: 'punch',
+    HARVEST: 'punch' // Using punch as a placeholder for harvest animation
 }
 
 export class Player {
@@ -55,7 +56,6 @@ export class Player {
         this.animations = {};
         this.activeAnimation = null;
         this.activeAnimationName = null;
-        this.isAttacking = false;
         animationGroups.forEach(group => {
             let newName = group.name.toLowerCase();
             if(group.name.includes('|')) newName = newName.split('|').pop();
@@ -65,6 +65,10 @@ export class Player {
         });
 
         // State & Stats
+        this.isAttacking = false;
+        this.isHarvesting = false;
+        this.harvestingTimer = 0;
+        this.targetResource = null;
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.attackSpeed = 500;
@@ -106,7 +110,7 @@ export class Player {
     }
 
     playAnimation(name, loop = true, speed = 1.0) {
-        if (this.activeAnimationName === name) return null;
+        if (this.activeAnimationName === name && this.activeAnimation.isPlaying) return null;
 
         const animation = this.animations[name];
         if (animation) {
@@ -146,7 +150,7 @@ export class Player {
     }
 
     attack() {
-        if (this.isAttacking) return;
+        if (this.isAttacking || this.isHarvesting) return;
         const now = Date.now();
         if (now - this.lastAttackTime < this.attackSpeed) return;
 
@@ -169,11 +173,14 @@ export class Player {
         }
     }
 
-    harvest(resourceMesh) {
-        const resourceType = this.game.resourceManager.harvestResource(resourceMesh);
-        if (resourceType) {
-            this.game.addResource(resourceType, 1);
-        }
+    startHarvesting(resource) {
+        if (this.isAttacking || this.isHarvesting) return;
+        if (!resource || !resource.mesh.isEnabled()) return;
+
+        this.isHarvesting = true;
+        this.targetResource = resource;
+        this.harvestingTimer = 2; // 2 seconds
+        console.log(`Started harvesting ${resource.type}`);
     }
 
     takeDamage(amount) {
@@ -188,6 +195,19 @@ export class Player {
     }
 
     update(delta) {
+        // --- State Handlers ---
+        if (this.isHarvesting) {
+            this.harvestingTimer -= delta;
+            this.playAnimation(ANIMATIONS_NAME.HARVEST, true, 1.5);
+
+            if (this.harvestingTimer <= 0) {
+                this.game.resourceManager.harvestResource(this.targetResource);
+                this.isHarvesting = false;
+                this.targetResource = null;
+            }
+            return; // Prevent any other action while harvesting
+        }
+
         const isMoving = this.keys.z || this.keys.s || this.keys.q || this.keys.d;
 
         // --- Gravity ---

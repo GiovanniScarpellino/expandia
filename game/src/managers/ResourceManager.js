@@ -120,7 +120,7 @@ export class ResourceManager {
             this.resources.push(resource);
 
             new Interactable(interactableMesh, 2, () => {
-                this.harvestResource(resource);
+                this.game.player.startHarvesting(resource);
             }, visualMesh);
         }
     }
