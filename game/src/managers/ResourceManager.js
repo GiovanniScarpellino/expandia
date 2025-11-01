@@ -25,17 +25,31 @@ export class ResourceManager {
         // Resources are now spawned procedurally by World.js
     }
 
-    spawnResource(position, type = null) {
+    spawnResource(position, explicitType = null) {
         // Prevent spawning if the player is too close
         if (this.game.player && BABYLON.Vector3.Distance(this.game.player.hitbox.position, position) < 1.0) {
             console.log("Player is too close, resource will not spawn.");
             return;
         }
 
-        const random = Math.random();
-        // Only allow graves to spawn after the player has unlocked a certain number of tiles
-        if (this.game.tilesUnlockedCount > 10 && random < 0.25) {
-            // 25% chance to spawn a grave
+        let typeToSpawn = explicitType;
+
+        if (!explicitType) {
+            const random = Math.random();
+            const graveChance = 0.15; // 15% chance for a grave
+            const rockChance = 0.30;  // 30% chance for a rock
+
+            // 1. Grave check (only after 10 tiles unlocked)
+            if (this.game.tilesUnlockedCount > 10 && random < graveChance) {
+                typeToSpawn = 'grave';
+            } else if (random < graveChance + rockChance) { // 2. Rock check
+                typeToSpawn = 'rock';
+            } else { // 3. Default to Tree
+                typeToSpawn = 'tree';
+            }
+        }
+
+        if (typeToSpawn === 'grave') {
             const graveMesh = BABYLON.MeshBuilder.CreateBox("grave", {width: 1, height: 2, depth: 0.5}, this.scene);
             graveMesh.position = position.clone();
             graveMesh.position.y = 1;
@@ -54,14 +68,10 @@ export class ResourceManager {
             return;
         }
 
-        if (!type) {
-            type = Math.random() < 0.7 ? 'tree' : 'rock'; // 70% chance for a tree
-        }
-
         let model;
-        if (type === 'tree') {
+        if (typeToSpawn === 'tree') {
             model = this.game.models.tree;
-        } else if (type === 'rock') {
+        } else if (typeToSpawn === 'rock') {
             model = this.game.models.rock;
         }
 
@@ -70,7 +80,7 @@ export class ResourceManager {
             let interactableMesh;
             let visualMesh;
 
-            if (type === 'rock') {
+            if (typeToSpawn === 'rock') {
                 const rockMesh = model.mesh.clone(`rock-visual-${this.resources.length}`);
                 rockMesh.setEnabled(true);
                 rockMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
@@ -87,11 +97,11 @@ export class ResourceManager {
                 rockMesh.position.y = -0.4;
 
                 this.game.addShadowCaster(rockMesh);
-                resource = new Resource(collisionBox, type, rockMesh);
+                resource = new Resource(collisionBox, typeToSpawn, rockMesh);
                 interactableMesh = collisionBox;
                 visualMesh = rockMesh;
             } else { // For trees and other resources
-                const newMesh = model.mesh.clone(`${type}-${this.resources.length}`);
+                const newMesh = model.mesh.clone(`${typeToSpawn}-${this.resources.length}`);
                 newMesh.position = position.clone();
                 newMesh.setEnabled(true);
                 newMesh.isPickable = true;
@@ -102,7 +112,7 @@ export class ResourceManager {
                 });
 
                 this.game.addShadowCaster(newMesh);
-                resource = new Resource(newMesh, type);
+                resource = new Resource(newMesh, typeToSpawn);
                 interactableMesh = newMesh;
                 visualMesh = newMesh;
             }
@@ -124,7 +134,8 @@ export class ResourceManager {
                 resource.mesh.setEnabled(true);
                 if (resource.type === 'rock') {
                     resource.mesh.checkCollisions = true;
-                } else {
+                }
+                else {
                     resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = true);
                 }
                 this.respawnQueue.splice(i, 1);
@@ -137,7 +148,8 @@ export class ResourceManager {
             resource.mesh.setEnabled(false);
             if (resource.type === 'rock') {
                 resource.mesh.checkCollisions = false;
-            } else {
+            }
+            else {
                 resource.mesh.getChildMeshes().forEach(m => m.checkCollisions = false);
             }
             this.respawnQueue.push({ resource: resource, respawnTime: Date.now() + this.respawnTime });

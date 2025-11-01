@@ -94,8 +94,7 @@ export class World {
             const resourceSpawnInterval = 3; // Guarantee a resource every 3 tiles
 
             if (this.tilesUnlockedSinceLastResource >= resourceSpawnInterval) {
-                const resourceType = (this.tilesUnlockedSinceLastResource % 2 === 0) ? 'tree' : 'rock'; // Alternate types
-                this.game.resourceManager.spawnResource(targetTile.position, resourceType);
+                this.game.resourceManager.spawnResource(targetTile.position); // Let ResourceManager decide type
                 this.tilesUnlockedSinceLastResource = 0; // Reset counter
             }
         }
