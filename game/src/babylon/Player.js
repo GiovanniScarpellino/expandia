@@ -17,9 +17,13 @@ export class Player {
 
         // The visual mesh that the player sees
         this.mesh = mesh;
+        this.mesh.isPickable = false;
         this.mesh.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
         this.mesh.rotation = new BABYLON.Vector3(0, Math.PI * 2, 0);
-        this.mesh.getChildMeshes(true).forEach(m => m.checkCollisions = false);
+        this.mesh.getChildMeshes(true).forEach(m => {
+            m.checkCollisions = false;
+            m.isPickable = false;
+        });
 
         // The invisible collision hitbox
         const hitboxWidth = 0.5;
@@ -29,6 +33,7 @@ export class Player {
         this.hitbox.checkCollisions = true;
         this.hitbox.ellipsoid = new BABYLON.Vector3(hitboxWidth / 4, hitboxHeight / 2, hitboxDepth / 4);
         this.hitbox.isVisible = false;
+        this.hitbox.isPickable = false;
         this.hitbox.applyGravity = false; // We will handle gravity manually
 
         // Parent the visual mesh to the hitbox, so it follows automatically

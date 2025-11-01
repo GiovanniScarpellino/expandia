@@ -43,7 +43,6 @@ export class World {
         if (withCost) {
             const cost = 1; // Lowered initial cost
             if (this.game.wood < cost) {
-                console.log("Not enough wood to unlock tile!");
                 return; // Not enough resources
             }
             this.game.addResource('tree', -cost);
@@ -52,8 +51,12 @@ export class World {
         // If tile doesn't exist, create it. If it exists but is locked, get it.
         const targetTile = this.createTile(x, z, true); // Create/update the tile as unlocked
 
-        // Create locked neighbors
+        // Create new locked neighbors where necessary
         this.createNeighboringLockedTiles(x, z);
+        
+        // Refresh the interactable state of all neighbors of the newly unlocked tile
+        this.updateNeighboringTiles(x, z);
+
 
         // --- Fairer Resource Spawning Logic ---
         if (withCost) {
@@ -71,8 +74,39 @@ export class World {
     createNeighboringLockedTiles(x, z) {
         const neighbors = [{ dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 }];
         neighbors.forEach(n => {
-            this.createTile(x + n.dx, z + n.dz, false); // Creates a locked tile if it doesn't exist
+            // This will create a new locked tile only if one doesn't already exist.
+            this.createTile(x + n.dx, z + n.dz, false);
         });
+    }
+
+    updateNeighboringTiles(x, z) {
+        const neighbors = [
+            { dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 },
+            { dx: 1, dz: 1 }, { dx: -1, dz: -1 }, { dx: 1, dz: -1 }, { dx: -1, dz: 1 } // Also check diagonals for their own updates
+        ];
+        neighbors.forEach(n => {
+            const nx = x + n.dx;
+            const nz = z + n.dz;
+            const neighborKey = this.getTileKey(nx, nz);
+            const neighborTile = this.tiles[neighborKey];
+
+            // If the neighbor is a locked tile, refresh its interactable state
+            if (neighborTile && !neighborTile.metadata.unlocked) {
+                this.updateLockedTileInteractable(nx, nz);
+            }
+        });
+    }
+
+    isAdjacentToUnlocked(x, z) {
+        const neighbors = [{ dx: 1, dz: 0 }, { dx: -1, dz: 0 }, { dx: 0, dz: 1 }, { dx: 0, dz: -1 }];
+        for (const n of neighbors) {
+            const key = this.getTileKey(x + n.dx, z + n.dz);
+            const tile = this.tiles[key];
+            if (tile && tile.metadata.unlocked) {
+                return true;
+            }
+        }
+        return false;
     }
 
     getTileKey(x, z) {
@@ -124,25 +158,77 @@ export class World {
         return spawnPoints;
     }
 
+    updateLockedTileInteractable(x, z) {
+        const key = this.getTileKey(x, z);
+        const tile = this.tiles[key];
+
+        if (!tile || tile.metadata.unlocked) return;
+
+        const shouldBeInteractable = this.isAdjacentToUnlocked(x, z);
+
+        if (shouldBeInteractable && !tile.metadata.interactable) {
+            // Add interactable
+            const highlightBox = BABYLON.MeshBuilder.CreateBox(`highlight-${key}`, {
+                width: this.tileSize * 0.9, 
+                depth: this.tileSize * 0.9, 
+                height: 0.1 
+            }, this.scene);
+            highlightBox.position = tile.position.clone();
+            highlightBox.position.y = 0.5; // Adjusted Y position
+            highlightBox.isPickable = false;
+            highlightBox.isVisible = false; // Hide for final version
+            highlightBox.metadata = { isHighlightMesh: true };
+
+            const interactionBox = BABYLON.MeshBuilder.CreateBox(`interaction-${key}`, {
+                width: this.tileSize,
+                depth: this.tileSize,
+                height: 0.2
+            }, this.scene);
+            interactionBox.position = tile.position.clone();
+            interactionBox.position.y = 0.5; // Adjusted Y position
+            interactionBox.isPickable = true;
+            interactionBox.isVisible = false; // Hide for final version
+
+            tile.metadata.interactable = new Interactable(interactionBox, 3, () => {
+                this.unlockTile(x, z, true);
+            }, highlightBox);
+
+        } else if (!shouldBeInteractable && tile.metadata.interactable) {
+            // Remove interactable
+            if (this.game.interactionManager.currentTarget === tile.metadata.interactable) {
+                this.game.interactionManager.clearTarget();
+            }
+            tile.metadata.interactable.mesh.dispose(); // dispose interactionBox
+            tile.metadata.interactable.visualMesh.dispose(); // dispose highlightBox
+            tile.metadata.interactable = null;
+        }
+    }
+
+
     createTile(x, z, unlocked = false) {
         const key = this.getTileKey(x, z);
-        if (this.tiles[key]) {
+        const existingTile = this.tiles[key];
+
+        if (existingTile) {
             // If we're trying to unlock an existing locked tile
-            if (unlocked && !this.tiles[key].metadata.unlocked) {
-                this.tiles[key].material = this.unlockedMaterial;
-                this.tiles[key].metadata.unlocked = true;
-                this.tiles[key].isPickable = false;
-                if (this.tiles[key].interactable) {
-                    if (this.game.interactionManager.currentTarget === this.tiles[key].interactable) {
+            if (unlocked && !existingTile.metadata.unlocked) {
+                existingTile.material = this.unlockedMaterial;
+                existingTile.metadata.unlocked = true;
+                
+                // Make it no longer interactable
+                if (existingTile.metadata.interactable) {
+                    if (this.game.interactionManager.currentTarget === existingTile.metadata.interactable) {
                         this.game.interactionManager.clearTarget();
                     }
-                    this.tiles[key].interactable.visualMesh.dispose(); // Dispose of the highlight box
-                    this.tiles[key].interactable = null;
+                    existingTile.metadata.interactable.mesh.dispose();
+                    existingTile.metadata.interactable.visualMesh.dispose();
+                    existingTile.metadata.interactable = null;
                 }
             }
-            return this.tiles[key];
+            return existingTile;
         }
 
+        // --- Create new tile if it doesn't exist ---
         const tile = BABYLON.MeshBuilder.CreatePlane(key, { size: this.tileSize }, this.scene);
         const tilePosition = new BABYLON.Vector3(x * this.tileSize, 0, z * this.tileSize);
         tile.position = tilePosition;
@@ -150,30 +236,16 @@ export class World {
         tile.material = unlocked ? this.unlockedMaterial : this.lockedMaterial;
         tile.receiveShadows = true;
         tile.checkCollisions = true;
+        tile.isPickable = false; // The ground plane itself is never pickable
         tile.collisionGroup = COLLISION_GROUPS.TERRAIN;
         tile.collisionMask = COLLISION_GROUPS.PLAYER | COLLISION_GROUPS.NPC;
 
-        tile.metadata = { type: 'tile', unlocked, x, z };
+        tile.metadata = { type: 'tile', unlocked, x, z, interactable: null };
         this.tiles[key] = tile;
 
         if (!unlocked) {
-            tile.isPickable = true;
-
-            // Create a highlight mesh for better visibility
-            const highlightBox = BABYLON.MeshBuilder.CreateBox(`highlight-${key}`, { 
-                width: this.tileSize * 0.9, 
-                depth: this.tileSize * 0.9, 
-                height: 0.1 
-            }, this.scene);
-            highlightBox.position = tile.position.clone();
-            highlightBox.position.y += 0.05;
-            highlightBox.isPickable = false;
-            highlightBox.isVisible = false; // Initially invisible
-            highlightBox.metadata = { isHighlightMesh: true }; // Add metadata
-
-            new Interactable(tile, 3, () => {
-                this.unlockTile(x, z, true);
-            }, highlightBox);
+            // A new locked tile is only interactable if it's next to an unlocked one.
+            this.updateLockedTileInteractable(x, z);
         }
 
         return tile;
