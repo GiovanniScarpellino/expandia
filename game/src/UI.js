@@ -11,6 +11,7 @@ export class UI {
         // Resource elements
         this.woodCounter = document.getElementById('wood-counter');
         this.stoneCounter = document.getElementById('stone-counter');
+        this.goldCounter = document.getElementById('gold-counter');
 
         // Wave stats elements
         this.waveStats = document.getElementById('wave-stats');
@@ -30,7 +31,7 @@ export class UI {
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
-        this.updateResources(0, 0);
+        this.updateResources(0, 0, 0);
         this.waveStats.style.display = 'none';
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
@@ -132,12 +133,15 @@ export class UI {
         }
     }
 
-    updateResources(wood, stone) {
+    updateResources(wood, stone, gold) {
         if (this.woodCounter) {
             this.woodCounter.innerText = `Bois: ${wood}`;
         }
         if (this.stoneCounter) {
             this.stoneCounter.innerText = `Pierre: ${stone}`;
+        }
+        if (this.goldCounter) {
+            this.goldCounter.innerText = `Or: ${gold}`;
         }
     }
 }

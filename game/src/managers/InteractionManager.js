@@ -8,39 +8,18 @@ export class InteractionManager {
         this.highlightLayer = game.highlightLayer;
 
         this.currentTarget = null;
-        this.potentialTarget = null; // New: store hovered interactable
+        this.potentialTarget = null;
 
         this.scene.onPointerObservable.add((pointerInfo) => {
             if (this.game.gameState !== 'RUNNING') return;
 
             switch (pointerInfo.type) {
-                case BABYLON.PointerEventTypes.POINTERMOVE:
-                    this.handlePointerMove(pointerInfo);
-                    break;
+                // POINTERMOVE is now handled in the update loop
                 case BABYLON.PointerEventTypes.POINTERDOWN:
                     this.handlePointerDown(pointerInfo);
                     break;
             }
         });
-    }
-
-    handlePointerMove(pointerInfo) {
-        const scene = this.scene;
-
-        // Pick 1: For world position (aiming)
-        const groundPick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
-        if (groundPick.hit) {
-            this.game.mousePositionInWorld = groundPick.pickedPoint;
-        }
-
-        // Pick 2: For interactable objects
-        const interactablePick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => mesh.isPickable && mesh.isEnabled());
-
-        if (interactablePick.hit) {
-            this.potentialTarget = this.getInteractable(interactablePick.pickedMesh);
-        } else {
-            this.potentialTarget = null;
-        }
     }
 
     handlePointerDown(pointerInfo) {
@@ -103,6 +82,21 @@ export class InteractionManager {
     }
 
     update() {
+        // Pick 1: Continuously update mouse position in the world for aiming
+        const groundPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.name === "mouseGround" || mesh.name === "arenaGround");
+        if (groundPick.hit) {
+            this.game.mousePositionInWorld = groundPick.pickedPoint;
+        }
+
+        // Pick 2: Continuously update potential target for interaction
+        const interactablePick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.isPickable && mesh.isEnabled());
+        if (interactablePick.hit) {
+            this.potentialTarget = this.getInteractable(interactablePick.pickedMesh);
+        } else {
+            this.potentialTarget = null;
+        }
+
+        // Handle highlighting based on proximity and potential target
         if (this.potentialTarget && this.isPlayerClose(this.potentialTarget)) {
             this.setTarget(this.potentialTarget);
         } else {

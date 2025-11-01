@@ -47,6 +47,8 @@ export class BabylonGame {
         // Player Resources
         this.wood = 20;
         this.stone = 0;
+        this.gold = 0;
+        this.heartFragments = 0;
 
         this.ui = new UI(this);
 
@@ -240,7 +242,7 @@ export class BabylonGame {
         this.resourceManager.initialize();
 
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
-        this.ui.updateResources(this.wood, this.stone);
+        this.ui.updateResources(this.wood, this.stone, this.gold);
 
         // Base visual model
         this.base = this.models.base.mesh.clone("base");
@@ -311,7 +313,7 @@ export class BabylonGame {
         this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
-        this.enemyManager.start(this.arenaCenter);
+        this.enemyManager.start(this.arenaCenter, this.heartFragments);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
 
         const light = this.scene.getLightByName("dirLight");
@@ -380,7 +382,12 @@ export class BabylonGame {
         else if (type === 'rock') {
             this.stone += amount;
         }
-        this.ui.updateResources(this.wood, this.stone);
+        this.ui.updateResources(this.wood, this.stone, this.gold);
+    }
+
+    addGold(amount) {
+        this.gold += amount;
+        this.ui.updateResources(this.wood, this.stone, this.gold);
     }
 
     addShadowCaster(mesh) {
