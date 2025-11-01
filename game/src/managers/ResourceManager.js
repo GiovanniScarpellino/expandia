@@ -33,7 +33,8 @@ export class ResourceManager {
         }
 
         const random = Math.random();
-        if (random < 0.25) {
+        // Only allow graves to spawn after the player has unlocked a certain number of tiles
+        if (this.game.tilesUnlockedCount > 10 && random < 0.25) {
             // 25% chance to spawn a grave
             const graveMesh = BABYLON.MeshBuilder.CreateBox("grave", {width: 1, height: 2, depth: 0.5}, this.scene);
             graveMesh.position = position.clone();

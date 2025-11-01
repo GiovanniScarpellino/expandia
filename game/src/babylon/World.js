@@ -75,6 +75,7 @@ export class World {
                 return; // Not enough resources
             }
             this.game.addResource('tree', -cost);
+            this.game.tilesUnlockedCount++; // Increment the counter
         }
 
         // If tile doesn't exist, create it. If it exists but is locked, get it.
