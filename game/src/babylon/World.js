@@ -27,7 +27,38 @@ export class World {
             }
         }
 
-        // Guarantee some starting resources
+        // Procedurally spawn a starting forest
+        const startingTiles = [];
+        for (let x = -3; x <= 3; x++) {
+            for (let z = -3; z <= 3; z++) {
+                // Exclude a 3x3 area in the center
+                if (Math.abs(x) > 1 || Math.abs(z) > 1) {
+                    startingTiles.push(this.tiles[this.getTileKey(x, z)]);
+                }
+            }
+        }
+
+        // Shuffle the tiles to randomize spawn locations
+        for (let i = startingTiles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [startingTiles[i], startingTiles[j]] = [startingTiles[j], startingTiles[i]];
+        }
+
+        // Spawn resources
+        const resourcesToSpawn = [
+            { type: 'tree', count: 3 },
+            { type: 'rock', count: 2 },
+        ];
+
+        let tileIndex = 0;
+        resourcesToSpawn.forEach(resource => {
+            for (let i = 0; i < resource.count; i++) {
+                if (tileIndex < startingTiles.length) {
+                    this.game.resourceManager.spawnResource(startingTiles[tileIndex].position, resource.type);
+                    tileIndex++;
+                }
+            }
+        });
     }
 
     unlockTile(x, z, withCost = true) {

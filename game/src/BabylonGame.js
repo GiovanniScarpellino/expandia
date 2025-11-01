@@ -44,11 +44,12 @@ export class BabylonGame {
         this.gameMode = 'EXPLORATION'; // EXPLORATION, COMBAT
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
-        // Player Resources
-        this.wood = 20;
+        // Player Resources & Stats
+        this.wood = 5;
         this.stone = 0;
         this.gold = 0;
         this.heartFragments = 0;
+        this.tilesUnlockedCount = 0;
 
         this.ui = new UI(this);
 
