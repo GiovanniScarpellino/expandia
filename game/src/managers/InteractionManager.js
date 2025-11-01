@@ -49,7 +49,10 @@ export class InteractionManager {
         if (this.currentTarget && this.isPlayerClose(this.currentTarget)) {
             this.currentTarget.onInteract();
         } else {
-            this.player.attack();
+            // Only allow attacking in COMBAT mode
+            if (this.game.gameMode === 'COMBAT') {
+                this.player.attack();
+            }
         }
     }
 
