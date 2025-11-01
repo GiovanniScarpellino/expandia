@@ -271,6 +271,7 @@ export class BabylonGame {
         collisionBox.position = this.base.position.clone();
         collisionBox.checkCollisions = true;
         collisionBox.isVisible = false;
+        collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
 
         this.camera.setTarget(this.player.hitbox.position);
     }

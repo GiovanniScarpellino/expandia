@@ -35,7 +35,7 @@ export class NPC {
 
         // Collision groups
         this.hitbox.collisionGroup = COLLISION_GROUPS.NPC;
-        this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN | COLLISION_GROUPS.WALL;
+        this.hitbox.collisionMask = COLLISION_GROUPS.TERRAIN;
 
         // Create visual mesh (subclasses will override this)
         this.mesh = null;
