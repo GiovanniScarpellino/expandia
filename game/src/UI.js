@@ -93,12 +93,16 @@ export class UI {
         this.shopItemsContainer.appendChild(unitsHeader);
 
         const units = [
-            { id: 'lumberjackChick', name: 'Poussin Bûcheron', cost: { wood: 10, stone: 0 }, action: () => this.game.buildingManager.createLumberjackChick() },
-            { id: 'minerChick', name: 'Poussin Mineur', cost: { wood: 0, stone: 10 }, action: () => this.game.buildingManager.createMinerChick() },
+            { id: 'lumberjackChick', name: 'Poussin Bûcheron', action: () => this.game.buildingManager.createLumberjackChick() },
+            { id: 'minerChick', name: 'Poussin Mineur', action: () => this.game.buildingManager.createMinerChick() },
         ];
 
         units.forEach(item => {
-            const costText = item.cost.wood > 0 ? `${item.cost.wood} bois` : `${item.cost.stone} pierre`;
+            const isLumberjack = item.id === 'lumberjackChick';
+            const cost = isLumberjack ? this.game.buildingManager.getLumberjackChickCost() : this.game.buildingManager.getMinerChickCost();
+            const costType = isLumberjack ? 'bois' : 'pierre';
+            const costText = `${cost} ${costType}`;
+
             const itemDiv = document.createElement('div');
             itemDiv.className = 'shop-item';
             itemDiv.innerHTML = `
@@ -112,8 +116,8 @@ export class UI {
                 const success = item.action();
                 if (success) {
                     this.showToast(`${item.name} acheté !`);
+                    this.populateShop(); // Refresh shop to show new price
                 } else {
-                    const costType = item.cost.wood > 0 ? 'bois' : 'pierre';
                     this.showToast(`Pas assez de ${costType}.`);
                 }
             });
