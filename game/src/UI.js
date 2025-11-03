@@ -241,6 +241,41 @@ export class UI {
 
             this.shopItemsContainer.appendChild(itemDiv);
         }
+
+        // --- Items Section ---
+        const itemsHeader = document.createElement('h3');
+        itemsHeader.className = 'shop-section-header';
+        itemsHeader.innerText = 'Objets';
+        this.shopItemsContainer.appendChild(itemsHeader);
+
+        const items = [
+            { id: 'minimap', name: 'Mini-carte', cost: 0, costType: 'gold', action: (cost) => this.game.buyMinimap(cost) },
+        ];
+
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'shop-item';
+            const canAfford = this.game.gold >= item.cost;
+            const isBought = (item.id === 'minimap' && this.game.hasMinimap);
+
+            itemDiv.innerHTML = `
+                <span>${item.name}</span>
+                <div class="shop-action">
+                    <span>Coût: ${item.cost} ${item.costType}</span>
+                    <button ${!canAfford || isBought ? 'disabled' : ''}>${isBought ? 'Acheté' : 'Acheter'}</button>
+                </div>
+            `;
+            itemDiv.querySelector('button').addEventListener('click', () => {
+                const success = item.action(item.cost);
+                if (success) {
+                    this.showToast(`${item.name} acheté !`);
+                    this.populateShop(); // Refresh shop to show new price/state
+                } else {
+                    this.showToast(`Pas assez d'${item.costType}.`);
+                }
+            });
+            this.shopItemsContainer.appendChild(itemDiv);
+        });
     }
 
     showToast(message) {

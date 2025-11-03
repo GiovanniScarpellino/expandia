@@ -9,6 +9,7 @@ import { UpgradeManager } from './managers/UpgradeManager.js';
 import { UI } from './UI.js';
 import { InteractionManager } from './managers/InteractionManager.js';
 import { Interactable } from './babylon/Interactable.js';
+import { Minimap } from './babylon/Minimap.js';
 
 // Collision Groups
 export const COLLISION_GROUPS = {
@@ -32,6 +33,7 @@ export class BabylonGame {
         this.buildingManager = null;
         this.upgradeManager = null;
         this.interactionManager = null;
+        this.minimap = null;
         this.camera = null;
         this.cameraOffset = new BABYLON.Vector3(0, 12, -10);
         this.models = {};
@@ -61,6 +63,7 @@ export class BabylonGame {
         this.explorationMultiplier = 1;
         this.tilesUnlockedCount = 0;
         this.combatCount = 0;
+        this.hasMinimap = false;
 
         this.ui = new UI(this);
 
@@ -250,6 +253,7 @@ export class BabylonGame {
         this.enemyManager = new EnemyManager(this);
         this.buildingManager = new BuildingManager(this);
         this.upgradeManager = new UpgradeManager(this);
+        this.minimap = new Minimap(this);
 
         // Create the combat arena using the world tile system
         const arenaRadius = 4; // Creates a 9x9 area
@@ -427,6 +431,17 @@ export class BabylonGame {
         this.ui.updateResources(this.wood, this.stone, this.gold);
     }
 
+    buyMinimap(cost) {
+        if (this.gold >= cost) {
+            this.addGold(-cost);
+            this.hasMinimap = true;
+            console.log("Minimap purchased!");
+            // Here you would also likely activate the minimap UI element
+            return true;
+        }
+        return false;
+    }
+
     addScore(baseAmount, category) {
         const multiplier = category === 'combat' ? this.combatMultiplier : this.explorationMultiplier;
         this.score += baseAmount * multiplier;
@@ -506,6 +521,10 @@ export class BabylonGame {
 
             if (this.interactionManager) {
                 this.interactionManager.update();
+            }
+
+            if (this.minimap) {
+                this.minimap.update();
             }
 
             if (this.gameMode === 'COMBAT') {
