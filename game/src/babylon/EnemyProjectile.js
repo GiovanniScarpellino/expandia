@@ -1,11 +1,11 @@
 import * as BABYLON from '@babylonjs/core';
 
 export class EnemyProjectile {
-    constructor(game, startPosition, targetPosition) {
+    constructor(game, startPosition, targetPosition, damageMultiplier = 1) {
         this.game = game;
         this.scene = game.scene;
         this.speed = 10;
-        this.damage = 15;
+        this.damage = 15 * damageMultiplier;
         this.isDisposed = false;
 
         // Create mesh

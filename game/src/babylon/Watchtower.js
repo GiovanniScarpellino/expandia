@@ -3,13 +3,14 @@ import { COLLISION_GROUPS } from '../BabylonGame.js';
 import { EnemyProjectile } from './EnemyProjectile.js';
 
 export class Watchtower {
-    constructor(game, position) {
+    constructor(game, position, healthMultiplier = 1, damageMultiplier = 1) {
         this.game = game;
         this.scene = game.scene;
         this.isDisposed = false;
+        this.damageMultiplier = damageMultiplier;
 
         // Stats
-        this.maxHealth = 50;
+        this.maxHealth = 50 * healthMultiplier;
         this.health = this.maxHealth;
         this.attackRange = 15;
         this.attackCooldown = 2000; // ms
@@ -76,7 +77,7 @@ export class Watchtower {
     fire() {
         const startPosition = this.mesh.position.clone().add(new BABYLON.Vector3(0, 0.5, 0));
         const targetPosition = this.game.player.hitbox.position.clone();
-        const projectile = new EnemyProjectile(this.game, startPosition, targetPosition);
+        const projectile = new EnemyProjectile(this.game, startPosition, targetPosition, this.damageMultiplier);
         this.game.addEnemyProjectile(projectile);
     }
 

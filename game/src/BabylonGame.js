@@ -60,6 +60,7 @@ export class BabylonGame {
         this.combatMultiplier = 1;
         this.explorationMultiplier = 1;
         this.tilesUnlockedCount = 0;
+        this.combatCount = 0;
 
         this.ui = new UI(this);
 
@@ -326,7 +327,8 @@ export class BabylonGame {
 
     startCombat(grave) {
         if (this.gameMode === 'COMBAT') return;
-        console.log("Starting combat...");
+        this.combatCount++;
+        console.log(`Starting combat... Combat count: ${this.combatCount}`);
 
         const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
         if (shadowGenerator) {
@@ -348,7 +350,7 @@ export class BabylonGame {
         this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
-        this.enemyManager.start(this.arenaCenter);
+        this.enemyManager.start(this.arenaCenter, this.combatCount);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
     }
 

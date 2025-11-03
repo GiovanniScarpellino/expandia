@@ -2,16 +2,16 @@ import * as BABYLON from '@babylonjs/core';
 import { COLLISION_GROUPS } from '../BabylonGame.js';
 
 export class Bug {
-    constructor(game, position) {
+    constructor(game, position, healthMultiplier = 1, damageMultiplier = 1) {
         this.game = game;
         this.scene = game.scene;
         this.speed = 1.0; // units per second
         this.isDisposed = false;
 
         // Stats
-        this.maxHealth = 30;
+        this.maxHealth = 30 * healthMultiplier;
         this.health = this.maxHealth;
-        this.attackDamage = 10;
+        this.attackDamage = 10 * damageMultiplier;
         this.attackRange = 1.2;
         this.attackCooldown = 1000; // ms
         this.lastAttackTime = 0;

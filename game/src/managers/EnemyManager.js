@@ -8,75 +8,28 @@ export class EnemyManager {
         this.game = game;
         this.scene = game.scene;
         this.enemies = [];
-        this.waveNumber = 0;
-        this.timeBetweenWaves = 2000; // 2 seconds
-        this.waveTimer = 0;
-        this.isWaveActive = false;
         this.arenaCenter = null;
-
-        // Combat configuration based on heart fragments
-        this.combatConfigurations = [
-            // 0 fragments (First combat)
-            {
-                totalWaves: 2,
-                waves: [
-                    { bug: 16, armoredBug: 0 },
-                    { bug: 12, armoredBug: 4 },
-                ],
-                reward: { gold: 50, wood: 20, stone: 10 }
-            },
-            // 1 fragment
-            {
-                totalWaves: 3,
-                waves: [
-                    { bug: 20, armoredBug: 0 },
-                    { bug: 16, armoredBug: 6 },
-                    { bug: 10, armoredBug: 2, watchtower: 1 },
-                ],
-                reward: { gold: 75, wood: 30, stone: 15 }
-            },
-            // 2 fragments
-            {
-                totalWaves: 3,
-                waves: [
-                    { bug: 24, armoredBug: 4 },
-                    { bug: 20, armoredBug: 10 },
-                    { bug: 16, armoredBug: 4, watchtower: 2 },
-                ],
-                reward: { gold: 100, wood: 40, stone: 20 }
-            },
-            // Add more configurations for more fragments
-        ];
         this.currentCombatConfig = null;
     }
 
-    start(arenaCenter) {
+    start(arenaCenter, combatCount) {
         this.arenaCenter = arenaCenter;
-        this.waveNumber = 1;
-        this.isWaveActive = false; // Will be set to true by the first wave spawn
-        this.waveTimer = this.timeBetweenWaves; // Start first wave almost immediately
-        
-        const difficulty = 0;
-        this.currentCombatConfig = this.combatConfigurations[difficulty] || this.combatConfigurations[this.combatConfigurations.length - 1];
-
-        console.log(`EnemyManager started for arena combat. Difficulty: ${difficulty}`);
+        this.currentCombatConfig = this.generateCombatConfig(combatCount);
+        this.spawnEnemies();
+        console.log(`EnemyManager started for arena combat. Difficulty: ${combatCount}`);
     }
 
     stop() {
-        // Despawn all enemies
         this.enemies.forEach(enemy => enemy.dispose());
         this.enemies = [];
-        this.waveNumber = 0;
-        this.isWaveActive = false;
         this.arenaCenter = null;
         this.currentCombatConfig = null;
         console.log("EnemyManager stopped.");
     }
 
     update(delta) {
-        if (!this.arenaCenter) return; // Don't run if combat isn't active
+        if (!this.arenaCenter) return;
 
-        // Update all active enemies
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             if (this.enemies[i].isDisposed) {
                 this.enemies.splice(i, 1);
@@ -85,54 +38,52 @@ export class EnemyManager {
             }
         }
 
-        // If a wave is active and all enemies are defeated, prepare for the next wave
-        if (this.isWaveActive && this.enemies.length === 0) {
-            this.game.addScore(100, 'combat'); // Wave complete score
-            if (this.waveNumber >= this.currentCombatConfig.totalWaves) {
-                // Combat finished, give rewards and end
-                this.giveRewards();
-                this.game.endCombat();
-                return;
-            }
-            this.isWaveActive = false;
-            this.waveTimer = 0;
-            this.waveNumber++;
-        }
-
-        // If no wave is active, count down to the next one
-        if (!this.isWaveActive) {
-            this.waveTimer += delta * 1000;
-            if (this.waveTimer >= this.timeBetweenWaves) {
-                this.spawnWave();
-            }
+        if (this.enemies.length === 0) {
+            this.giveRewards();
+            this.game.endCombat();
         }
     }
 
-    spawnWave() {
-        console.log(`Spawning Wave ${this.waveNumber}`);
-        this.isWaveActive = true;
-        
-        const waveConfig = this.currentCombatConfig.waves[this.waveNumber - 1];
-        const bugCount = waveConfig.bug || 0;
-        const armoredBugCount = waveConfig.armoredBug || 0;
-        const watchtowerCount = waveConfig.watchtower || 0;
-        const totalEnemies = bugCount + armoredBugCount + watchtowerCount;
+    generateCombatConfig(combatCount) {
+        const bugCount = 10 + combatCount * 5;
+        const armoredBugCount = combatCount * 2;
+        const watchtowerCount = Math.floor(combatCount / 3);
+
+        const healthMultiplier = 1 + (combatCount - 1) * 0.2;
+        const damageMultiplier = 1 + (combatCount - 1) * 0.1;
+
+        const goldReward = 50 + (combatCount - 1) * 25;
+
+        return {
+            bug: bugCount,
+            armoredBug: armoredBugCount,
+            watchtower: watchtowerCount,
+            healthMultiplier: healthMultiplier,
+            damageMultiplier: damageMultiplier,
+            reward: { gold: goldReward }
+        };
+    }
+
+    spawnEnemies() {
+        const { bug, armoredBug, watchtower, healthMultiplier, damageMultiplier } = this.currentCombatConfig;
+        const totalEnemies = bug + armoredBug + watchtower;
+        console.log(`Spawning ${totalEnemies} enemies.`);
 
         let spawnedCount = 0;
-        for (let i = 0; i < bugCount; i++) {
-            this.spawnEnemy('bug', spawnedCount++, totalEnemies);
+        for (let i = 0; i < bug; i++) {
+            this.spawnEnemy('bug', spawnedCount++, totalEnemies, healthMultiplier, damageMultiplier);
         }
-        for (let i = 0; i < armoredBugCount; i++) {
-            this.spawnEnemy('armoredBug', spawnedCount++, totalEnemies);
+        for (let i = 0; i < armoredBug; i++) {
+            this.spawnEnemy('armoredBug', spawnedCount++, totalEnemies, healthMultiplier, damageMultiplier);
         }
-        for (let i = 0; i < watchtowerCount; i++) {
-            this.spawnEnemy('watchtower', spawnedCount++, totalEnemies);
+        for (let i = 0; i < watchtower; i++) {
+            this.spawnEnemy('watchtower', spawnedCount++, totalEnemies, healthMultiplier, damageMultiplier);
         }
 
-        this.game.ui.updateWaveStats(this.waveNumber, totalEnemies);
+        this.game.ui.updateWaveStats(1, totalEnemies);
     }
 
-    spawnEnemy(type, index, totalEnemies) {
+    spawnEnemy(type, index, totalEnemies, healthMultiplier, damageMultiplier) {
         const angle = (index / totalEnemies) * Math.PI * 2;
         const spawnRadius = 20;
         const x = this.arenaCenter.x + Math.cos(angle) * spawnRadius;
@@ -141,11 +92,11 @@ export class EnemyManager {
 
         let newEnemy;
         if (type === 'bug') {
-            newEnemy = new Bug(this.game, spawnPoint);
+            newEnemy = new Bug(this.game, spawnPoint, healthMultiplier, damageMultiplier);
         } else if (type === 'armoredBug') {
-            newEnemy = new ArmoredBug(this.game, spawnPoint);
+            newEnemy = new ArmoredBug(this.game, spawnPoint, healthMultiplier, damageMultiplier);
         } else if (type === 'watchtower') {
-            newEnemy = new Watchtower(this.game, spawnPoint);
+            newEnemy = new Watchtower(this.game, spawnPoint, healthMultiplier, damageMultiplier);
         }
         this.enemies.push(newEnemy);
     }
@@ -154,7 +105,7 @@ export class EnemyManager {
         const index = this.enemies.indexOf(enemy);
         if (index > -1) {
             this.enemies.splice(index, 1);
-            this.game.ui.updateWaveStats(this.waveNumber, this.enemies.length);
+            this.game.ui.updateWaveStats(1, this.enemies.length);
         }
     }
 
@@ -164,4 +115,3 @@ export class EnemyManager {
         this.game.addGold(reward.gold * this.game.goldMultiplier);
     }
 }
-

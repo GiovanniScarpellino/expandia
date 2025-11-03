@@ -18,7 +18,6 @@ export class UI {
 
         // Wave stats elements
         this.waveStats = document.getElementById('wave-stats');
-        this.waveCounter = document.getElementById('wave-counter');
         this.enemyCounter = document.getElementById('enemy-counter');
 
         // Permanent stats elements
@@ -279,9 +278,6 @@ export class UI {
     updateWaveStats(waveNumber, remainingEnemies) {
         if (this.game.gameMode === 'COMBAT') {
             this.waveStats.style.display = 'block';
-            if (this.waveCounter) {
-                this.waveCounter.innerText = `Manche: ${waveNumber}`;
-            }
             if (this.enemyCounter) {
                 this.enemyCounter.innerText = `Ennemis: ${remainingEnemies}`;
             }
