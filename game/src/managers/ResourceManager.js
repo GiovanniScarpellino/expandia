@@ -154,6 +154,7 @@ export class ResourceManager {
             }
             this.respawnQueue.push({ resource: resource, respawnTime: Date.now() + this.respawnTime });
             this.game.addResource(resource.type, 1);
+            this.game.addScore(1, 'exploration');
         }
     }
 }

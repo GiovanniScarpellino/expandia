@@ -29,6 +29,7 @@ export class BuildingManager {
             const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(2, 0, -2));
             const chick = new LumberjackChick(this.game, spawnPosition);
             this.chicks.push(chick);
+            this.game.addScore(25, 'exploration');
             return true;
         } else {
             return false;
@@ -42,6 +43,7 @@ export class BuildingManager {
             const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(-2, 0, -2));
             const chick = new MinerChick(this.game, spawnPosition);
             this.chicks.push(chick);
+            this.game.addScore(25, 'exploration');
             return true;
         } else {
             return false;

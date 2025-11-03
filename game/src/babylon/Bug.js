@@ -126,6 +126,7 @@ export class Bug {
         
         if (this.game.player) {
             this.game.player.addXp(this.xpValue);
+            this.game.addScore(10, 'combat');
         }
 
         // Notify EnemyManager

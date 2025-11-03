@@ -51,6 +51,9 @@ export class BabylonGame {
         this.stone = 0;
         this.gold = 0;
         this.goldMultiplier = 1;
+        this.score = 0;
+        this.combatMultiplier = 1;
+        this.explorationMultiplier = 1;
         this.tilesUnlockedCount = 0;
 
         this.ui = new UI(this);
@@ -324,7 +327,9 @@ export class BabylonGame {
         if (shadowGenerator) {
             shadowGenerator.removeShadowCaster(this.base, true);
             this.resourceManager.resources.forEach(resource => {
-                shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+                if (resource.visualMesh) {
+                    shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+                }
             });
         }
 
@@ -352,7 +357,9 @@ export class BabylonGame {
         if (shadowGenerator) {
             shadowGenerator.addShadowCaster(this.base, true);
             this.resourceManager.resources.forEach(resource => {
-                shadowGenerator.addShadowCaster(resource.visualMesh, true);
+                if (resource.visualMesh) {
+                    shadowGenerator.addShadowCaster(resource.visualMesh, true);
+                }
             });
         }
 
@@ -411,6 +418,12 @@ export class BabylonGame {
     addGold(amount) {
         this.gold += amount;
         this.ui.updateResources(this.wood, this.stone, this.gold);
+    }
+
+    addScore(baseAmount, category) {
+        const multiplier = category === 'combat' ? this.combatMultiplier : this.explorationMultiplier;
+        this.score += baseAmount * multiplier;
+        this.ui.updateScore(this.score);
     }
 
     addShadowCaster(mesh) {

@@ -87,6 +87,7 @@ export class EnemyManager {
 
         // If a wave is active and all enemies are defeated, prepare for the next wave
         if (this.isWaveActive && this.enemies.length === 0) {
+            this.game.addScore(100, 'combat'); // Wave complete score
             if (this.waveNumber >= this.currentCombatConfig.totalWaves) {
                 // Combat finished, give rewards and end
                 this.giveRewards();

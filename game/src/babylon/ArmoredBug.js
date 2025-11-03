@@ -118,6 +118,7 @@ export class ArmoredBug {
         
         if (this.game.player) {
             this.game.player.addXp(this.xpValue);
+            this.game.addScore(15, 'combat');
         }
 
         this.game.enemyManager.removeEnemy(this);

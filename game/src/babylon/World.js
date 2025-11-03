@@ -79,6 +79,7 @@ export class World {
             }
             this.game.addResource('tree', -cost);
             this.game.tilesUnlockedCount++; // Increment the counter
+            this.game.addScore(5, 'exploration');
         }
 
         // If tile doesn't exist, create it. If it exists but is locked, get it.

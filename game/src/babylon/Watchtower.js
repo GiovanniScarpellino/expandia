@@ -86,6 +86,7 @@ export class Watchtower {
         
         if (this.game.player) {
             this.game.player.addXp(this.xpValue);
+            this.game.addScore(25, 'combat');
         }
 
         this.game.enemyManager.removeEnemy(this);

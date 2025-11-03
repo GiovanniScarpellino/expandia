@@ -13,6 +13,9 @@ export class UI {
         this.stoneCounter = document.getElementById('stone-counter');
         this.goldCounter = document.getElementById('gold-counter');
 
+        // Score
+        this.scoreValue = document.getElementById('score-value');
+
         // Wave stats elements
         this.waveStats = document.getElementById('wave-stats');
         this.waveCounter = document.getElementById('wave-counter');
@@ -24,6 +27,8 @@ export class UI {
         this.permDamage = document.getElementById('perm-damage');
         this.permProjCount = document.getElementById('perm-proj-count');
         this.permProjSize = document.getElementById('perm-proj-size');
+        this.permCombatMult = document.getElementById('perm-combat-mult');
+        this.permExploMult = document.getElementById('perm-explo-mult');
 
         // Overlay screens
         this.gameOverScreen = document.getElementById('game-over-screen');
@@ -40,6 +45,8 @@ export class UI {
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
         this.updateResources(0, 0, 0);
+        this.updateScore(0);
+        this.updateMultipliers(1, 1);
         this.waveStats.style.display = 'none';
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
@@ -245,6 +252,21 @@ export class UI {
         }
     }
 
+    updateScore(score) {
+        if (this.scoreValue) {
+            this.scoreValue.innerText = score;
+        }
+    }
+
+    updateMultipliers(combat, exploration) {
+        if (this.permCombatMult) {
+            this.permCombatMult.innerText = `${combat.toFixed(1)}x`;
+        }
+        if (this.permExploMult) {
+            this.permExploMult.innerText = `${exploration.toFixed(1)}x`;
+        }
+    }
+
     updatePermanentStats(player) {
         if (!player) return;
         if (this.permAttackSpeed) {
@@ -262,5 +284,6 @@ export class UI {
         if (this.permProjSize) {
             this.permProjSize.innerText = `${player.projectileSizeModifier.toFixed(2)}x`;
         }
+        this.updateMultipliers(this.game.combatMultiplier, this.game.explorationMultiplier);
     }
 }

@@ -12,6 +12,22 @@ export class UpgradeManager {
                 maxLevel: 3,
                 isImplemented: true,
             },
+            artOfWar: {
+                name: "Art de la Guerre",
+                description: "Augmente le multiplicateur de score en combat de 0.1.",
+                cost: [150, 300, 600],
+                costType: 'gold',
+                maxLevel: 3,
+                isImplemented: true,
+            },
+            pioneer: {
+                name: "Pionnier",
+                description: "Augmente le multiplicateur de score d'exploration de 0.1.",
+                cost: [100, 200, 400],
+                costType: 'gold',
+                maxLevel: 3,
+                isImplemented: true,
+            },
             multiTileUnlock: {
                 name: 'Déblocage Multiple',
                 description: 'Débloque plusieurs tuiles adjacentes à la fois.',
@@ -147,5 +163,12 @@ export class UpgradeManager {
         if (upgradeId === 'goldRush') {
             this.game.goldMultiplier += 0.02;
         }
+        if (upgradeId === 'artOfWar') {
+            this.game.combatMultiplier += 0.1;
+        }
+        if (upgradeId === 'pioneer') {
+            this.game.explorationMultiplier += 0.1;
+        }
+        this.game.ui.updatePermanentStats(this.game.player);
     }
 }
