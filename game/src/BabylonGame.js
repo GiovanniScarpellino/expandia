@@ -320,6 +320,14 @@ export class BabylonGame {
         if (this.gameMode === 'COMBAT') return;
         console.log("Starting combat...");
 
+        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
+        if (shadowGenerator) {
+            shadowGenerator.removeShadowCaster(this.base, true);
+            this.resourceManager.resources.forEach(resource => {
+                shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+            });
+        }
+
         if (grave) {
             const index = this.graves.indexOf(grave);
             if (index > -1) {
@@ -334,29 +342,24 @@ export class BabylonGame {
         this.gameMode = 'COMBAT';
         this.enemyManager.start(this.arenaCenter);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
-
-        const light = this.scene.getLightByName("dirLight");
-
-        if (light) {         
-            console.log(this.player.hitbox.position);
-            console.log(this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20)));
-            light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
-        }
     }
 
     endCombat() {
         if (this.gameMode !== 'COMBAT') return;
         console.log("Ending combat...");
 
+        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
+        if (shadowGenerator) {
+            shadowGenerator.addShadowCaster(this.base, true);
+            this.resourceManager.resources.forEach(resource => {
+                shadowGenerator.addShadowCaster(resource.visualMesh, true);
+            });
+        }
+
         if (this.playerReturnPosition) {
             this.player.hitbox.position = this.playerReturnPosition;
         }
         this.playerReturnPosition = null;
-
-        const light = this.scene.getLightByName("dirLight");
-        if (light) {
-            light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
-        }
 
         this.gameMode = 'EXPLORATION';
         this.enemyManager.stop();
@@ -466,6 +469,11 @@ export class BabylonGame {
                 this.player.update(delta);
                 this.camera.position = this.player.hitbox.position.add(this.cameraOffset);
                 this.camera.setTarget(this.player.hitbox.position);
+
+                const light = this.scene.getLightByName("dirLight");
+                if (light) {
+                    light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
+                }
 
                 if (this.player.hitbox.position.y < -10) {
                     this.gameOver();
