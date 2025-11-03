@@ -259,74 +259,95 @@ canvas {
 }
 
 /* --- Shop Screen --- */
-.shop-section-header {
-    color: #3498db;
-    font-size: 1.4em;
-    text-align: left;
-    margin-top: 20px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #444;
-    padding-bottom: 5px;
+#base-shop-screen .overlay-content {
+    width: 90%;
+    max-width: 1200px;
+    height: 80%;
 }
 
 #shop-items-container {
+    height: calc(100% - 100px); /* Adjust based on header/footer height */
+    overflow-y: auto;
+    padding-right: 15px; /* For scrollbar */
+}
+
+.shop-columns {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+}
+
+.shop-column {
+    flex: 1;
+    background: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Reduced gap */
-    max-height: 350px; /* Reduced height */
-    overflow-y: auto;
-    padding-right: 10px;
+    gap: 10px;
+}
+
+.shop-section-header {
+    color: #3498db;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    text-align: center;
 }
 
 .shop-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     background-color: #2c3e50;
-    padding: 12px; /* Reduced padding */
-    border-radius: 8px;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-.upgrade-item {
-    flex-wrap: wrap;
-}
-
-.upgrade-info {
-    flex-basis: 65%;
-    text-align: left;
-}
-
-.upgrade-info h4 {
-    margin: 0 0 5px 0;
-    color: #f1c40f;
-    font-size: 1em; /* Reduced font size */
-}
-.upgrade-info h4 span {
-    color: #bdc3c7;
-    font-size: 0.8em;
-}
-
-.upgrade-info p {
+.shop-item h4 {
     margin: 0;
-    font-size: 0.85em; /* Reduced font size */
+    color: #f1c40f;
+    font-size: 1.1em;
+}
+
+.shop-item p {
+    margin: 0;
+    font-size: 0.9em;
     color: #ecf0f1;
 }
 
 .shop-action {
-    flex-basis: 30%;
-    text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .shop-action span {
-    display: block;
-    margin-bottom: 8px; /* Reduced margin */
-    font-size: 0.9em;
+    font-size: 1em;
+    color: #00BFA6;
+    font-weight: bold;
 }
 
-.shop-action button {
-    margin: 0;
-    padding: 8px 15px; /* Reduced padding */
-    font-size: 0.9em;
+.shop-item button {
+    background-color: #27ae60;
+    padding: 8px 18px;
+    font-size: 1em;
+    margin-top: 0;
+    border-radius: 8px;
+}
+
+.shop-item button:hover {
+    background-color: #229954;
+}
+
+.shop-item button:disabled {
+    background-color: #7f8c8d;
+    cursor: not-allowed;
 }
 
 /* --- Toast Notifications --- */

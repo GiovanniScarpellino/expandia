@@ -154,17 +154,32 @@ export class UI {
 
     populateShop() {
         this.shopItemsContainer.innerHTML = '';
+        const columnsContainer = document.createElement('div');
+        columnsContainer.className = 'shop-columns';
+        this.shopItemsContainer.appendChild(columnsContainer);
+
+        const unitsColumn = document.createElement('div');
+        unitsColumn.className = 'shop-column';
+        columnsContainer.appendChild(unitsColumn);
+
+        const upgradesColumn = document.createElement('div');
+        upgradesColumn.className = 'shop-column';
+        columnsContainer.appendChild(upgradesColumn);
+
+        const itemsColumn = document.createElement('div');
+        itemsColumn.className = 'shop-column';
+        columnsContainer.appendChild(itemsColumn);
 
         // --- Units Section ---
-        const unitsHeader = document.createElement('h3');
+        const unitsHeader = document.createElement('h2');
         unitsHeader.className = 'shop-section-header';
         unitsHeader.innerText = 'Unités';
-        this.shopItemsContainer.appendChild(unitsHeader);
+        unitsColumn.appendChild(unitsHeader);
 
         const units = [
-            { id: 'lumberjackChick', name: 'Poussin Bûcheron', action: () => this.game.buildingManager.createLumberjackChick() },
-            { id: 'minerChick', name: 'Poussin Mineur', action: () => this.game.buildingManager.createMinerChick() },
-            { id: 'explorerChick', name: 'Poussin Explorateur', action: () => this.game.buildingManager.createExplorerChick() },
+            { id: 'lumberjackChick', name: 'Poussin Bûcheron', description: 'Recrute un poussin bûcheron pour collecter du bois.', action: () => this.game.buildingManager.createLumberjackChick() },
+            { id: 'minerChick', name: 'Poussin Mineur', description: 'Recrute un poussin mineur pour collecter de la pierre.', action: () => this.game.buildingManager.createMinerChick() },
+            { id: 'explorerChick', name: 'Poussin Explorateur', description: 'Recrute un poussin explorateur pour débloquer de nouvelles tuiles.', action: () => this.game.buildingManager.createExplorerChick() },
         ];
 
         units.forEach(item => {
@@ -183,14 +198,32 @@ export class UI {
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'shop-item';
-            itemDiv.innerHTML = `
-                <span>${item.name}</span>
-                <div class="shop-action">
-                    <span>Coût: ${costText}</span>
-                    <button>Acheter</button>
-                </div>
-            `;
-            itemDiv.querySelector('button').addEventListener('click', () => {
+
+            const itemInfo = document.createElement('div');
+            itemInfo.className = 'item-info';
+            itemDiv.appendChild(itemInfo);
+
+            const itemName = document.createElement('h4');
+            itemName.innerText = item.name;
+            itemInfo.appendChild(itemName);
+
+            const itemDescription = document.createElement('p');
+            itemDescription.innerText = item.description;
+            itemInfo.appendChild(itemDescription);
+
+            const shopAction = document.createElement('div');
+            shopAction.className = 'shop-action';
+            itemDiv.appendChild(shopAction);
+
+            const costSpan = document.createElement('span');
+            costSpan.innerText = `Coût: ${costText}`;
+            shopAction.appendChild(costSpan);
+
+            const buyButton = document.createElement('button');
+            buyButton.innerText = 'Acheter';
+            shopAction.appendChild(buyButton);
+
+            buyButton.addEventListener('click', () => {
                 const success = item.action();
                 if (success) {
                     this.showToast(`${item.name} acheté !`);
@@ -199,14 +232,14 @@ export class UI {
                     this.showToast(`Pas assez de ${costType}.`);
                 }
             });
-            this.shopItemsContainer.appendChild(itemDiv);
+            unitsColumn.appendChild(itemDiv);
         });
 
         // --- Upgrades Section ---
-        const upgradesHeader = document.createElement('h3');
+        const upgradesHeader = document.createElement('h2');
         upgradesHeader.className = 'shop-section-header';
         upgradesHeader.innerText = 'Améliorations';
-        this.shopItemsContainer.appendChild(upgradesHeader);
+        upgradesColumn.appendChild(upgradesHeader);
 
         const allUpgrades = this.game.upgradeManager.upgrades;
 
@@ -218,7 +251,7 @@ export class UI {
             const cost = this.game.upgradeManager.getUpgradeCost(id);
 
             const itemDiv = document.createElement('div');
-            itemDiv.className = 'shop-item upgrade-item';
+            itemDiv.className = 'shop-item';
 
             let costText = 'Max';
             if (cost !== Infinity) {
@@ -226,34 +259,50 @@ export class UI {
                 costText = `${cost} ${costType}`;
             }
 
-            itemDiv.innerHTML = `
-                <div class="upgrade-info">
-                    <h4>${upgrade.name} <span>(Niv. ${currentLevel} / ${upgrade.maxLevel})</span></h4>
-                    <p>${upgrade.description}</p>
-                </div>
-                <div class="shop-action">
-                    <span>Coût: ${costText}</span>
-                    <button ${cost === Infinity ? 'disabled' : ''}>Acheter</button>
-                </div>
-            `;
+            const itemInfo = document.createElement('div');
+            itemInfo.className = 'item-info';
+            itemDiv.appendChild(itemInfo);
+
+            const upgradeName = document.createElement('h4');
+            upgradeName.innerHTML = `${upgrade.name} <span>(Niv. ${currentLevel} / ${upgrade.maxLevel})</span>`;
+            itemInfo.appendChild(upgradeName);
+
+            const upgradeDescription = document.createElement('p');
+            upgradeDescription.innerText = upgrade.description;
+            itemInfo.appendChild(upgradeDescription);
+
+            const shopAction = document.createElement('div');
+            shopAction.className = 'shop-action';
+            itemDiv.appendChild(shopAction);
+
+            const costSpan = document.createElement('span');
+            costSpan.innerText = `Coût: ${costText}`;
+            shopAction.appendChild(costSpan);
+
+            const buyButton = document.createElement('button');
+            buyButton.innerText = 'Acheter';
+            if (cost === Infinity) {
+                buyButton.disabled = true;
+            }
+            shopAction.appendChild(buyButton);
 
             if (cost !== Infinity) {
-                itemDiv.querySelector('button').addEventListener('click', () => {
+                buyButton.addEventListener('click', () => {
                     this.game.upgradeManager.buyUpgrade(id);
                 });
             }
 
-            this.shopItemsContainer.appendChild(itemDiv);
+            upgradesColumn.appendChild(itemDiv);
         }
 
         // --- Items Section ---
-        const itemsHeader = document.createElement('h3');
+        const itemsHeader = document.createElement('h2');
         itemsHeader.className = 'shop-section-header';
         itemsHeader.innerText = 'Objets';
-        this.shopItemsContainer.appendChild(itemsHeader);
+        itemsColumn.appendChild(itemsHeader);
 
         const items = [
-            { id: 'minimap', name: 'Mini-carte', cost: 100, costType: 'gold', action: (cost) => this.game.buyMinimap(cost) },
+            { id: 'minimap', name: 'Mini-carte', description: 'Affiche une petite carte en haut à droite de l\'écran.', cost: 100, costType: 'gold', action: (cost) => this.game.buyMinimap(cost) },
         ];
 
         items.forEach(item => {
@@ -262,24 +311,42 @@ export class UI {
             const canAfford = this.game.gold >= item.cost;
             const isBought = (item.id === 'minimap' && this.game.hasMinimap);
 
-            itemDiv.innerHTML = `
-                <span>${item.name}</span>
-                <div class="shop-action">
-                    <span>Coût: ${item.cost} ${item.costType}</span>
-                    <button ${!canAfford || isBought ? 'disabled' : ''}>${isBought ? 'Acheté' : 'Acheter'}</button>
-                </div>
-            `;
-            itemDiv.querySelector('button').addEventListener('click', () => {
+            const itemInfo = document.createElement('div');
+            itemInfo.className = 'item-info';
+            itemDiv.appendChild(itemInfo);
+
+            const itemName = document.createElement('h4');
+            itemName.innerText = item.name;
+            itemInfo.appendChild(itemName);
+
+            const itemDescription = document.createElement('p');
+            itemDescription.innerText = item.description;
+            itemInfo.appendChild(itemDescription);
+
+            const shopAction = document.createElement('div');
+            shopAction.className = 'shop-action';
+            itemDiv.appendChild(shopAction);
+
+            const costSpan = document.createElement('span');
+            costSpan.innerText = `Coût: ${item.cost} ${item.costType}`;
+            shopAction.appendChild(costSpan);
+
+            const buyButton = document.createElement('button');
+            buyButton.innerText = isBought ? 'Acheté' : 'Acheter';
+            buyButton.disabled = !canAfford || isBought;
+            shopAction.appendChild(buyButton);
+
+            buyButton.addEventListener('click', () => {
                 const success = item.action(item.cost);
                 if (success) {
                     this.showToast(`${item.name} acheté !`);
                     this.populateShop(); // Refresh shop to show new price/state
                     this.updateMinimapHintVisibility(); // Update hint visibility
                 } else {
-                    this.showToast(`Pas assez d'${item.costType}.`);
+                    this.showToast(`Pas assez d\'${item.costType}.`);
                 }
             });
-            this.shopItemsContainer.appendChild(itemDiv);
+            itemsColumn.appendChild(itemDiv);
         });
     }
 
