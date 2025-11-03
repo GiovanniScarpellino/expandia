@@ -15,7 +15,7 @@ export class Bug {
         this.attackRange = 1.2;
         this.attackCooldown = 1000; // ms
         this.lastAttackTime = 0;
-        this.xpValue = 25;
+        this.xpValue = 50;
 
         // Flash effect
         this.flashTimeout = null;

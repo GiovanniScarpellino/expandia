@@ -20,8 +20,8 @@ export class EnemyManager {
             {
                 totalWaves: 2,
                 waves: [
-                    { bug: 8, armoredBug: 0 },
-                    { bug: 6, armoredBug: 2 },
+                    { bug: 16, armoredBug: 0 },
+                    { bug: 12, armoredBug: 4 },
                 ],
                 reward: { gold: 50, wood: 20, stone: 10 }
             },
@@ -29,9 +29,9 @@ export class EnemyManager {
             {
                 totalWaves: 3,
                 waves: [
-                    { bug: 10, armoredBug: 0 },
-                    { bug: 8, armoredBug: 3 },
-                    { bug: 5, armoredBug: 1, watchtower: 1 },
+                    { bug: 20, armoredBug: 0 },
+                    { bug: 16, armoredBug: 6 },
+                    { bug: 10, armoredBug: 2, watchtower: 1 },
                 ],
                 reward: { gold: 75, wood: 30, stone: 15 }
             },
@@ -39,9 +39,9 @@ export class EnemyManager {
             {
                 totalWaves: 3,
                 waves: [
-                    { bug: 12, armoredBug: 2 },
-                    { bug: 10, armoredBug: 5 },
-                    { bug: 8, armoredBug: 2, watchtower: 2 },
+                    { bug: 24, armoredBug: 4 },
+                    { bug: 20, armoredBug: 10 },
+                    { bug: 16, armoredBug: 4, watchtower: 2 },
                 ],
                 reward: { gold: 100, wood: 40, stone: 20 }
             },
@@ -50,13 +50,13 @@ export class EnemyManager {
         this.currentCombatConfig = null;
     }
 
-    start(arenaCenter, difficulty) {
+    start(arenaCenter) {
         this.arenaCenter = arenaCenter;
         this.waveNumber = 1;
         this.isWaveActive = false; // Will be set to true by the first wave spawn
         this.waveTimer = this.timeBetweenWaves; // Start first wave almost immediately
         
-        // Select combat configuration based on difficulty (number of heart fragments)
+        const difficulty = 0;
         this.currentCombatConfig = this.combatConfigurations[difficulty] || this.combatConfigurations[this.combatConfigurations.length - 1];
 
         console.log(`EnemyManager started for arena combat. Difficulty: ${difficulty}`);
@@ -160,10 +160,7 @@ export class EnemyManager {
     giveRewards() {
         const reward = this.currentCombatConfig.reward;
         console.log("Combat finished! Giving rewards:", reward);
-        this.game.heartFragments++;
-        this.game.addGold(reward.gold);
-        this.game.addResource('tree', reward.wood);
-        this.game.addResource('rock', reward.stone);
-        this.game.ui.updateObjective(this.game.heartFragments, 5);
+        this.game.addGold(reward.gold * this.game.goldMultiplier);
     }
 }
+

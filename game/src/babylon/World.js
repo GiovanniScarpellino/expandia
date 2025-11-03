@@ -59,6 +59,9 @@ export class World {
                 }
             }
         });
+
+        // Add a grave for debugging combat
+        this.game.resourceManager.spawnResource(new BABYLON.Vector3(0, 0, -5), 'grave');
     }
 
     unlockTile(x, z, withCost = true) {

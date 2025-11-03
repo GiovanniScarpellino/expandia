@@ -14,7 +14,7 @@ export class Watchtower {
         this.attackRange = 15;
         this.attackCooldown = 2000; // ms
         this.lastAttackTime = 0;
-        this.xpValue = 50;
+        this.xpValue = 100;
 
         // Visual representation
         this.mesh = BABYLON.MeshBuilder.CreateCylinder("watchtower", { height: 2, diameter: 0.8 }, this.scene);

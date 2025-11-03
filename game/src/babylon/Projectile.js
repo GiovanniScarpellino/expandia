@@ -1,16 +1,21 @@
 import * as BABYLON from '@babylonjs/core';
 
 export class Projectile {
-    constructor(game, startPosition, targetPosition, speedModifier = 1) {
+    constructor(game, startPosition, targetPosition, speedModifier = 1, damage = 10, sizeModifier = 1) {
         this.game = game;
         this.scene = game.scene;
         this.baseSpeed = 15;
         this.speed = this.baseSpeed * speedModifier;
-        this.damage = 10;
+        this.damage = damage;
+        this.sizeModifier = sizeModifier;
         this.isDisposed = false;
 
         // Create an egg-shaped mesh
-        this.mesh = BABYLON.MeshBuilder.CreateSphere("projectile", { diameterX: 0.25, diameterY: 0.35, diameterZ: 0.25 }, this.scene);
+        this.mesh = BABYLON.MeshBuilder.CreateSphere("projectile", { 
+            diameterX: 0.25 * sizeModifier,
+            diameterY: 0.35 * sizeModifier,
+            diameterZ: 0.25 * sizeModifier 
+        }, this.scene);
         this.mesh.position = startPosition.clone();
 
         const material = new BABYLON.StandardMaterial("projectileMat", this.scene);
@@ -64,7 +69,7 @@ export class Projectile {
         const impactPosition = this.mesh.position.clone();
 
         // 1. Yolk Splat Decal
-        const decal = BABYLON.MeshBuilder.CreatePlane("yolkSplat", { size: 0.8 }, this.scene);
+        const decal = BABYLON.MeshBuilder.CreatePlane("yolkSplat", { size: 0.8 * this.sizeModifier }, this.scene);
         decal.position = new BABYLON.Vector3(impactPosition.x, 0.01, impactPosition.z);
         decal.rotation.x = Math.PI / 2;
         decal.material = this.game.yolkSplatMaterial;
@@ -82,8 +87,8 @@ export class Projectile {
         particleSystem.color2 = new BABYLON.Color4(0.8, 0.8, 0.7, 1.0);
         particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
 
-        particleSystem.minSize = 0.05;
-        particleSystem.maxSize = 0.1;
+        particleSystem.minSize = 0.05 * this.sizeModifier;
+        particleSystem.maxSize = 0.1 * this.sizeModifier;
 
         particleSystem.minLifeTime = 0.3;
         particleSystem.maxLifeTime = 0.8;

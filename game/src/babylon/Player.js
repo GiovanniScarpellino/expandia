@@ -74,6 +74,9 @@ export class Player {
         this.attackSpeed = 500;
         this.lastAttackTime = 0;
         this.projectileSpeedModifier = 1;
+        this.projectileDamage = 10;
+        this.projectileCount = 1;
+        this.projectileSizeModifier = 0.5;
 
         // Progression
         this.level = 1;
@@ -150,26 +153,41 @@ export class Player {
     }
 
     attack() {
-        if (this.isAttacking || this.isHarvesting) return;
+        if (this.isHarvesting) return;
         const now = Date.now();
         if (now - this.lastAttackTime < this.attackSpeed) return;
 
         this.lastAttackTime = now;
-        this.isAttacking = true;
 
         const targetPosition = this.game.mousePositionInWorld.clone();
         targetPosition.y = this.hitbox.position.y;
 
-        this.game.addProjectile(new Projectile(this.game, this.hitbox.position.clone(), targetPosition, this.projectileSpeedModifier));
+        const baseDirection = targetPosition.subtract(this.hitbox.position).normalize();
+        const spreadAngle = 15; // Angle in degrees for the spread
+
+        for (let i = 0; i < this.projectileCount; i++) {
+            let currentDirection = baseDirection.clone();
+            if (this.projectileCount > 1) {
+                const angleOffset = (i - (this.projectileCount - 1) / 2) * (spreadAngle * (Math.PI / 180));
+                const rotationMatrix = BABYLON.Matrix.RotationY(angleOffset);
+                currentDirection = BABYLON.Vector3.TransformCoordinates(baseDirection, rotationMatrix);
+            }
+            const finalTarget = this.hitbox.position.add(currentDirection.scale(10)); // Project target 10 units away
+
+            this.game.addProjectile(new Projectile(this.game, this.hitbox.position.clone(), finalTarget, this.projectileSpeedModifier, this.projectileDamage, this.projectileSizeModifier));
+        }
         
-        const anim = this.playAnimation(ANIMATIONS_NAME.ATTACK, false, 1.5);
-        if (anim) {
-            anim.onAnimationEndObservable.addOnce(() => {
-                this.isAttacking = false;
-            });
-        } else {
-            // If no attack animation, reset state after a short delay
-            setTimeout(() => { this.isAttacking = false; }, 300);
+        if (!this.isAttacking) {
+            this.isAttacking = true;
+            const anim = this.playAnimation(ANIMATIONS_NAME.ATTACK, false, 1.5);
+            if (anim) {
+                anim.onAnimationEndObservable.addOnce(() => {
+                    this.isAttacking = false;
+                });
+            } else {
+                // If no attack animation, reset state after a short delay
+                setTimeout(() => { this.isAttacking = false; }, 300);
+            }
         }
     }
 

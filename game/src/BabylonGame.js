@@ -50,7 +50,7 @@ export class BabylonGame {
         this.wood = 5;
         this.stone = 0;
         this.gold = 0;
-        this.heartFragments = 0;
+        this.goldMultiplier = 1;
         this.tilesUnlockedCount = 0;
 
         this.ui = new UI(this);
@@ -63,21 +63,36 @@ export class BabylonGame {
         this.upgradePool = [
             {
                 name: "Vitalité +",
-                description: "Augmente les points de vie maximum de 20.",
+                description: "Augmente les points de vie maximum de 10.",
                 apply: (player) => {
-                    player.maxHealth += 20;
-                    player.health += 20;
+                    player.maxHealth += 10;
+                    player.health += 10;
                 }
             },
             {
                 name: "Cadence de Tir +",
-                description: "Augmente la vitesse d'attaque de 15%.",
-                apply: (player) => { player.attackSpeed *= 0.85; }
+                description: "Augmente la vitesse d'attaque de 5%.",
+                apply: (player) => { player.attackSpeed *= 0.95; }
             },
             {
                 name: "Balles Rapides",
-                description: "Augmente la vitesse des projectiles de 25%.",
-                apply: (player) => { player.projectileSpeedModifier = (player.projectileSpeedModifier || 1) * 1.25; }
+                description: "Augmente la vitesse des projectiles de 10%.",
+                apply: (player) => { player.projectileSpeedModifier = (player.projectileSpeedModifier || 1) * 1.10; }
+            },
+            {
+                name: "Dégâts +",
+                description: "Augmente les dégâts des projectiles de 2.",
+                apply: (player) => { player.projectileDamage += 2; }
+            },
+            {
+                name: "Tir Multiple",
+                description: "Tire un projectile supplémentaire.",
+                apply: (player) => { player.projectileCount += 1; }
+            },
+            {
+                name: "Gros Projectiles",
+                description: "Augmente la taille des projectiles de 20%.",
+                apply: (player) => { player.projectileSizeModifier *= 1.20; }
             },
         ];
     }
@@ -246,7 +261,7 @@ export class BabylonGame {
 
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
         this.ui.updateResources(this.wood, this.stone, this.gold);
-        this.ui.updateObjective(this.heartFragments, 5);
+        this.ui.updatePermanentStats(this.player);
 
         // Base visual model
         this.base = this.models.base.mesh.clone("base");
@@ -317,7 +332,7 @@ export class BabylonGame {
         this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
-        this.enemyManager.start(this.arenaCenter, this.heartFragments);
+        this.enemyManager.start(this.arenaCenter);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
 
         const light = this.scene.getLightByName("dirLight");
@@ -376,6 +391,7 @@ export class BabylonGame {
         upgrade.apply(this.player);
         this.ui.hideLevelUpScreen();
         this.ui.updateHealth(this.player.health, this.player.maxHealth);
+        this.ui.updatePermanentStats(this.player);
         this.gameState = 'RUNNING';
     }
 

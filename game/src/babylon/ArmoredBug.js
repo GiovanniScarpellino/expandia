@@ -15,7 +15,7 @@ export class ArmoredBug {
         this.attackRange = 1.2;
         this.attackCooldown = 1500; // ms
         this.lastAttackTime = 0;
-        this.xpValue = 50;
+        this.xpValue = 100;
 
         // Flash effect
         this.flashTimeout = null;

@@ -13,13 +13,17 @@ export class UI {
         this.stoneCounter = document.getElementById('stone-counter');
         this.goldCounter = document.getElementById('gold-counter');
 
-        // Objective elements
-        this.objectiveText = document.getElementById('objective-text');
-
         // Wave stats elements
         this.waveStats = document.getElementById('wave-stats');
         this.waveCounter = document.getElementById('wave-counter');
         this.enemyCounter = document.getElementById('enemy-counter');
+
+        // Permanent stats elements
+        this.permAttackSpeed = document.getElementById('perm-attack-speed');
+        this.permProjSpeed = document.getElementById('perm-proj-speed');
+        this.permDamage = document.getElementById('perm-damage');
+        this.permProjCount = document.getElementById('perm-proj-count');
+        this.permProjSize = document.getElementById('perm-proj-size');
 
         // Overlay screens
         this.gameOverScreen = document.getElementById('game-over-screen');
@@ -36,7 +40,6 @@ export class UI {
         this.updateXpBar(0, 100, 1);
         this.updateWaveStats(0, 0);
         this.updateResources(0, 0, 0);
-        this.updateObjective(0, 5); // Initial objective: 0/5 fragments
         this.waveStats.style.display = 'none';
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
@@ -53,6 +56,21 @@ export class UI {
     showLevelUpScreen(upgrades) {
         // Clear previous cards
         this.upgradeCardsContainer.innerHTML = '';
+
+        // Player stats
+        const player = this.game.player;
+        const statsContainer = document.getElementById('player-stats-container');
+        statsContainer.innerHTML = `
+            <h3>Statistiques Actuelles</h3>
+            <ul>
+                <li><strong>PV Max:</strong> ${player.maxHealth}</li>
+                <li><strong>Vitesse d'Attaque:</strong> ${(1000 / player.attackSpeed).toFixed(2)}/s</li>
+                <li><strong>Vitesse Projectiles:</strong> ${player.projectileSpeedModifier.toFixed(2)}x</li>
+                <li><strong>Dégâts:</strong> ${player.projectileDamage}</li>
+                <li><strong>Nb. Projectiles:</strong> ${player.projectileCount}</li>
+                <li><strong>Taille Projectiles:</strong> ${player.projectileSizeModifier.toFixed(2)}x</li>
+            </ul>
+        `;
 
         // Create new cards
         upgrades.forEach(upgrade => {
@@ -227,9 +245,22 @@ export class UI {
         }
     }
 
-    updateObjective(currentFragments, totalFragments) {
-        if (this.objectiveText) {
-            this.objectiveText.innerText = `Objectif: Réparer le Cœur (${currentFragments} / ${totalFragments})`;
+    updatePermanentStats(player) {
+        if (!player) return;
+        if (this.permAttackSpeed) {
+            this.permAttackSpeed.innerText = `${(1000 / player.attackSpeed).toFixed(2)}/s`;
+        }
+        if (this.permProjSpeed) {
+            this.permProjSpeed.innerText = `${player.projectileSpeedModifier.toFixed(2)}x`;
+        }
+        if (this.permDamage) {
+            this.permDamage.innerText = player.projectileDamage;
+        }
+        if (this.permProjCount) {
+            this.permProjCount.innerText = player.projectileCount;
+        }
+        if (this.permProjSize) {
+            this.permProjSize.innerText = `${player.projectileSizeModifier.toFixed(2)}x`;
         }
     }
 }

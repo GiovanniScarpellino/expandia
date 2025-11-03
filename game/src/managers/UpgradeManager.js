@@ -4,6 +4,14 @@ export class UpgradeManager {
 
         this.upgrades = {
             // Economy
+            goldRush: {
+                name: "Ruée vers l'or",
+                description: "Augmente l'or gagné à la fin des combats de 2%.",
+                cost: [100, 250, 500],
+                costType: 'gold',
+                maxLevel: 3,
+                isImplemented: true,
+            },
             multiTileUnlock: {
                 name: 'Déblocage Multiple',
                 description: 'Débloque plusieurs tuiles adjacentes à la fois.',
@@ -136,7 +144,8 @@ export class UpgradeManager {
 
     applyUpgradeEffect(upgradeId) {
         console.log(`Applying effect for ${upgradeId}`);
-        // This is where the actual game logic modification will happen
-        // For now, it just logs a message.
+        if (upgradeId === 'goldRush') {
+            this.game.goldMultiplier += 0.02;
+        }
     }
 }

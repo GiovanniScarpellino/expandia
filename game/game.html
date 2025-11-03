@@ -19,10 +19,6 @@
             <div id="gold-counter">Or: 0</div>
         </div>
 
-        <div id="objective-display" class="hud-panel">
-            <span id="objective-text">Objectif: 0/5 fragments</span>
-        </div>
-
         <div id="wave-stats" class="hud-panel">
             <div id="wave-counter">Manche: 1</div>
             <div id="enemy-counter">Ennemis: 10</div>
@@ -39,13 +35,21 @@
             </div>
         </div>
 
+        <div id="permanent-player-stats" class="hud-panel">
+            <div>Vitesse d'Attaque: <span id="perm-attack-speed">2.00/s</span></div>
+            <div>Vitesse Projectiles: <span id="perm-proj-speed">1.00x</span></div>
+            <div>Dégâts: <span id="perm-damage">10</span></div>
+            <div>Nb. Projectiles: <span id="perm-proj-count">1</span></div>
+            <div>Taille Projectiles: <span id="perm-proj-size">1.00x</span></div>
+        </div>
+
         <a href="#" id="help-link">?</a>
     </div>
 
     <div id="game-over-screen" class="fullscreen-overlay" style="display: none;">
         <div class="overlay-content">
             <h1>GAME OVER</h1>
-            <p>Le cœur a été détruit. Votre progression a été réinitialisée.</p>
+            <p>La base a été détruite. Votre progression a été réinitialisée.</p>
             <button onclick="window.location.reload()">Recommencer</button>
         </div>
     </div>
@@ -61,6 +65,7 @@
         <div class="overlay-content">
             <h1>NIVEAU SUPÉRIEUR !</h1>
             <p>Choisissez une amélioration pour continuer.</p>
+            <div id="player-stats-container"></div>
             <div id="upgrade-cards-container"></div>
         </div>
     </div>
