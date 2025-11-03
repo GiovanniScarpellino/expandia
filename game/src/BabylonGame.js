@@ -328,6 +328,14 @@ export class BabylonGame {
         if (this.gameMode === 'COMBAT') return;
         console.log("Starting combat...");
 
+        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
+        if (shadowGenerator) {
+            shadowGenerator.removeShadowCaster(this.base, true);
+            this.resourceManager.resources.forEach(resource => {
+                shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+            });
+        }
+
         if (grave) {
             const index = this.graves.indexOf(grave);
             if (index > -1) {
@@ -347,6 +355,14 @@ export class BabylonGame {
     endCombat() {
         if (this.gameMode !== 'COMBAT') return;
         console.log("Ending combat...");
+
+        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
+        if (shadowGenerator) {
+            shadowGenerator.addShadowCaster(this.base, true);
+            this.resourceManager.resources.forEach(resource => {
+                shadowGenerator.addShadowCaster(resource.visualMesh, true);
+            });
+        }
 
         if (this.playerReturnPosition) {
             this.player.hitbox.position = this.playerReturnPosition;
