@@ -57,6 +57,7 @@ export class ResourceManager {
             graveMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.8); // A purplish color
             graveMesh.material = graveMaterial;
             graveMesh.checkCollisions = true;
+            graveMesh.collisionGroup = COLLISION_GROUPS.WALL;
             graveMesh.isPickable = true;
 
             new Interactable(graveMesh, 2, () => {

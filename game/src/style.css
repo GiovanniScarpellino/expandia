@@ -375,6 +375,30 @@ canvas {
     color: #fff;
 }
 
+#chick-pause-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    pointer-events: auto;
+}
+
+#chick-pause-controls button {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: 1px solid #fff;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+#chick-pause-controls button.paused {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
 /* --- Mobile Controls --- */
 #mobile-controls {
     display: none; /* Hidden by default, enabled for touch devices */

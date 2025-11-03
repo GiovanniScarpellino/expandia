@@ -44,6 +44,11 @@ export class BabylonGame {
         this.enemyProjectiles = [];
         this.gameState = 'RUNNING'; // RUNNING, PAUSED, GAMEOVER, LEVELUP
         this.gameMode = 'EXPLORATION'; // EXPLORATION, COMBAT
+        this.chickPauseState = {
+            'LUMBERJACK': false,
+            'MINER': false,
+            'EXPLORER': false,
+        };
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
         // Player Resources & Stats
@@ -323,16 +328,6 @@ export class BabylonGame {
         if (this.gameMode === 'COMBAT') return;
         console.log("Starting combat...");
 
-        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
-        if (shadowGenerator) {
-            shadowGenerator.removeShadowCaster(this.base, true);
-            this.resourceManager.resources.forEach(resource => {
-                if (resource.visualMesh) {
-                    shadowGenerator.removeShadowCaster(resource.visualMesh, true);
-                }
-            });
-        }
-
         if (grave) {
             const index = this.graves.indexOf(grave);
             if (index > -1) {
@@ -353,16 +348,6 @@ export class BabylonGame {
         if (this.gameMode !== 'COMBAT') return;
         console.log("Ending combat...");
 
-        const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
-        if (shadowGenerator) {
-            shadowGenerator.addShadowCaster(this.base, true);
-            this.resourceManager.resources.forEach(resource => {
-                if (resource.visualMesh) {
-                    shadowGenerator.addShadowCaster(resource.visualMesh, true);
-                }
-            });
-        }
-
         if (this.playerReturnPosition) {
             this.player.hitbox.position = this.playerReturnPosition;
         }
@@ -382,6 +367,10 @@ export class BabylonGame {
             this.gameState = 'RUNNING';
             this.ui.togglePauseScreen(false);
         }
+    }
+
+    toggleChicksPause(chickType) {
+        this.chickPauseState[chickType] = !this.chickPauseState[chickType];
     }
 
     startLevelUp() {
@@ -487,6 +476,10 @@ export class BabylonGame {
                 if (light) {
                     light.position = this.player.hitbox.position.add(new BABYLON.Vector3(20, 40, 20));
                 }
+                const hemiLight = this.scene.getLightByName("hemiLight");
+                if (hemiLight) {
+                    hemiLight.position = this.player.hitbox.position;
+                }
 
                 if (this.player.hitbox.position.y < -10) {
                     this.gameOver();
@@ -511,7 +504,9 @@ export class BabylonGame {
             }
 
             this.buildingManager.chicks.forEach(chick => {
-                chick.update(delta);
+                if (!this.chickPauseState[chick.specialization]) {
+                    chick.update(delta);
+                }
             });
 
             this.scene.render();

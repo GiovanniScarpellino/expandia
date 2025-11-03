@@ -40,6 +40,11 @@ export class UI {
         this.closeShopButton = document.getElementById('close-shop-button');
         this.toastContainer = document.getElementById('toast-container');
 
+        // Buttons
+        this.pauseLumberjackButton = document.getElementById('pause-lumberjack-button');
+        this.pauseMinerButton = document.getElementById('pause-miner-button');
+        this.pauseExplorerButton = document.getElementById('pause-explorer-button');
+
         // Initial state
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
@@ -50,6 +55,42 @@ export class UI {
         this.waveStats.style.display = 'none';
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
+        this.pauseLumberjackButton.addEventListener('click', () => {
+            this.game.toggleChicksPause('LUMBERJACK');
+            this.updatePauseButtons();
+        });
+        this.pauseMinerButton.addEventListener('click', () => {
+            this.game.toggleChicksPause('MINER');
+            this.updatePauseButtons();
+        });
+        this.pauseExplorerButton.addEventListener('click', () => {
+            this.game.toggleChicksPause('EXPLORER');
+            this.updatePauseButtons();
+        });
+    }
+
+    updatePauseButtons() {
+        if (this.game.chickPauseState['LUMBERJACK']) {
+            this.pauseLumberjackButton.innerText = 'Play Bûcherons';
+            this.pauseLumberjackButton.classList.add('paused');
+        } else {
+            this.pauseLumberjackButton.innerText = 'Pause Bûcherons';
+            this.pauseLumberjackButton.classList.remove('paused');
+        }
+        if (this.game.chickPauseState['MINER']) {
+            this.pauseMinerButton.innerText = 'Play Mineurs';
+            this.pauseMinerButton.classList.add('paused');
+        } else {
+            this.pauseMinerButton.innerText = 'Pause Mineurs';
+            this.pauseMinerButton.classList.remove('paused');
+        }
+        if (this.game.chickPauseState['EXPLORER']) {
+            this.pauseExplorerButton.innerText = 'Play Explorateurs';
+            this.pauseExplorerButton.classList.add('paused');
+        } else {
+            this.pauseExplorerButton.innerText = 'Pause Explorateurs';
+            this.pauseExplorerButton.classList.remove('paused');
+        }
     }
 
     togglePauseScreen(show) {
@@ -120,12 +161,21 @@ export class UI {
         const units = [
             { id: 'lumberjackChick', name: 'Poussin Bûcheron', action: () => this.game.buildingManager.createLumberjackChick() },
             { id: 'minerChick', name: 'Poussin Mineur', action: () => this.game.buildingManager.createMinerChick() },
+            { id: 'explorerChick', name: 'Poussin Explorateur', action: () => this.game.buildingManager.createExplorerChick() },
         ];
 
         units.forEach(item => {
-            const isLumberjack = item.id === 'lumberjackChick';
-            const cost = isLumberjack ? this.game.buildingManager.getLumberjackChickCost() : this.game.buildingManager.getMinerChickCost();
-            const costType = isLumberjack ? 'bois' : 'pierre';
+            let cost, costType;
+            if (item.id === 'lumberjackChick') {
+                cost = this.game.buildingManager.getLumberjackChickCost();
+                costType = 'bois';
+            } else if (item.id === 'minerChick') {
+                cost = this.game.buildingManager.getMinerChickCost();
+                costType = 'pierre';
+            } else if (item.id === 'explorerChick') {
+                cost = this.game.buildingManager.getExplorerChickCost();
+                costType = 'bois';
+            }
             const costText = `${cost} ${costType}`;
 
             const itemDiv = document.createElement('div');

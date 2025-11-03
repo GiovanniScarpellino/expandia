@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { LumberjackChick } from '../babylon/LumberjackChick.js';
 import { MinerChick } from '../babylon/MinerChick.js';
+import { ExplorerChick } from '../babylon/ExplorerChick.js';
 
 export class BuildingManager {
     constructor(game) {
@@ -9,7 +10,8 @@ export class BuildingManager {
         this.chicks = [];
         this.baseLumberjackCost = 10;
         this.baseMinerCost = 10;
-        this.costFactor = 1.2;
+        this.baseExplorerCost = 20;
+        this.costFactor = 1.5;
     }
 
     getLumberjackChickCost() {
@@ -20,6 +22,11 @@ export class BuildingManager {
     getMinerChickCost() {
         const minerChicks = this.chicks.filter(chick => chick instanceof MinerChick).length;
         return Math.round(this.baseMinerCost * Math.pow(this.costFactor, minerChicks));
+    }
+
+    getExplorerChickCost() {
+        const explorerChicks = this.chicks.filter(chick => chick instanceof ExplorerChick).length;
+        return Math.round(this.baseExplorerCost * Math.pow(this.costFactor, explorerChicks));
     }
 
     createLumberjackChick() {
@@ -44,6 +51,20 @@ export class BuildingManager {
             const chick = new MinerChick(this.game, spawnPosition);
             this.chicks.push(chick);
             this.game.addScore(25, 'exploration');
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    createExplorerChick() {
+        const cost = this.getExplorerChickCost();
+        if (this.game.wood >= cost) {
+            this.game.addResource('tree', -cost);
+            const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(0, 0, -2));
+            const chick = new ExplorerChick(this.game, spawnPosition);
+            this.chicks.push(chick);
+            this.game.addScore(50, 'exploration');
             return true;
         } else {
             return false;

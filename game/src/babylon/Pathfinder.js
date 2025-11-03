@@ -81,6 +81,9 @@ export class Pathfinder {
             // If we've reached one of our goal tiles, we're done.
             if (goalKeys.includes(currentKey)) {
                 const path = this.reconstructPath(cameFrom, currentKey, world);
+                if (path.length > 0 && BABYLON.Vector3.DistanceSquared(path[0], startNode.position) < 0.1) {
+                    path.shift();
+                }
                 return path;
             }
 

@@ -126,7 +126,7 @@ export class NPC {
         const direction = targetPosition.subtract(this.hitbox.position);
         const distance = direction.length();
 
-        if (distance <= 1.0) { // Increased threshold
+        if (distance <= 0.2) { // Increased threshold
             this.path.shift();
         }
         else {
@@ -198,3 +198,4 @@ export class NPC {
         return null;
     }
 }
+
