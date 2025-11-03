@@ -13,7 +13,10 @@
     </div>
 
     <div id="hud">
-        <canvas id="minimap" width="200" height="200"></canvas>
+        <div id="minimap-container">
+            <canvas id="minimap" width="200" height="200"></canvas>
+            <p id="minimap-hint">Appuie sur M pour afficher en grand</p>
+        </div>
         <div id="resource-stats" class="hud-panel">
             <div>Score: <span id="score-value">0</span></div>
             <div id="wood-counter">Bois: 0</div>
@@ -52,6 +55,10 @@
             <button id="pause-miner-button">Pause Mineurs</button>
             <button id="pause-explorer-button">Pause Explorateurs</button>
         </div>
+    </div>
+
+    <div id="large-map-container" class="fullscreen-overlay" style="display: none;">
+        <canvas id="large-map" width="800" height="800"></canvas>
     </div>
 
     <div id="game-over-screen" class="fullscreen-overlay" style="display: none;">

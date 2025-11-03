@@ -39,6 +39,9 @@ export class UI {
         this.closeShopButton = document.getElementById('close-shop-button');
         this.toastContainer = document.getElementById('toast-container');
 
+        // Minimap elements
+        this.minimapHint = document.getElementById('minimap-hint');
+
         // Buttons
         this.pauseLumberjackButton = document.getElementById('pause-lumberjack-button');
         this.pauseMinerButton = document.getElementById('pause-miner-button');
@@ -52,6 +55,7 @@ export class UI {
         this.updateScore(0);
         this.updateMultipliers(1, 1);
         this.waveStats.style.display = 'none';
+        this.updateMinimapHintVisibility(); // Set initial visibility
 
         this.closeShopButton.addEventListener('click', () => this.hideBaseShopScreen());
         this.pauseLumberjackButton.addEventListener('click', () => {
@@ -249,7 +253,7 @@ export class UI {
         this.shopItemsContainer.appendChild(itemsHeader);
 
         const items = [
-            { id: 'minimap', name: 'Mini-carte', cost: 0, costType: 'gold', action: (cost) => this.game.buyMinimap(cost) },
+            { id: 'minimap', name: 'Mini-carte', cost: 100, costType: 'gold', action: (cost) => this.game.buyMinimap(cost) },
         ];
 
         items.forEach(item => {
@@ -270,6 +274,7 @@ export class UI {
                 if (success) {
                     this.showToast(`${item.name} acheté !`);
                     this.populateShop(); // Refresh shop to show new price/state
+                    this.updateMinimapHintVisibility(); // Update hint visibility
                 } else {
                     this.showToast(`Pas assez d'${item.costType}.`);
                 }
@@ -319,6 +324,7 @@ export class UI {
         } else {
             this.waveStats.style.display = 'none';
         }
+        this.updateMinimapHintVisibility(); // Update hint visibility when game mode changes
     }
 
     updateResources(wood, stone, gold) {
@@ -366,5 +372,11 @@ export class UI {
             this.permProjSize.innerText = `${player.projectileSizeModifier.toFixed(2)}x`;
         }
         this.updateMultipliers(this.game.combatMultiplier, this.game.explorationMultiplier);
+    }
+
+    updateMinimapHintVisibility() {
+        if (this.minimapHint) {
+            this.minimapHint.style.display = this.game.hasMinimap && this.game.gameMode !== 'COMBAT' ? 'block' : 'none';
+        }
     }
 }

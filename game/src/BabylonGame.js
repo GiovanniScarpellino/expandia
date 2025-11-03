@@ -64,6 +64,7 @@ export class BabylonGame {
         this.tilesUnlockedCount = 0;
         this.combatCount = 0;
         this.hasMinimap = false;
+        this.isMapLarge = false;
 
         this.ui = new UI(this);
 
@@ -326,6 +327,9 @@ export class BabylonGame {
             if (e.key === 'Escape') {
                 this.togglePause();
             }
+            if (e.key === 'm' || e.key === 'M') {
+                this.toggleLargeMap();
+            }
         });
     }
 
@@ -356,6 +360,7 @@ export class BabylonGame {
         this.gameMode = 'COMBAT';
         this.enemyManager.start(this.arenaCenter, this.combatCount);
         this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
+        this.ui.updateMinimapHintVisibility();
     }
 
     endCombat() {
@@ -377,6 +382,8 @@ export class BabylonGame {
 
         this.gameMode = 'EXPLORATION';
         this.enemyManager.stop();
+        this.ui.updateMinimapHintVisibility();
+        this.ui.updateWaveStats(0, 0);
     }
 
     togglePause() {
@@ -389,6 +396,13 @@ export class BabylonGame {
             this.gameState = 'RUNNING';
             this.ui.togglePauseScreen(false);
         }
+    }
+
+    toggleLargeMap() {
+        if (!this.hasMinimap || this.gameMode === 'COMBAT') return;
+        this.isMapLarge = !this.isMapLarge;
+        const largeMapContainer = document.getElementById('large-map-container');
+        largeMapContainer.style.display = this.isMapLarge ? 'flex' : 'none';
     }
 
     toggleChicksPause(chickType) {
@@ -436,7 +450,7 @@ export class BabylonGame {
             this.addGold(-cost);
             this.hasMinimap = true;
             console.log("Minimap purchased!");
-            // Here you would also likely activate the minimap UI element
+            this.ui.updateMinimapHintVisibility();
             return true;
         }
         return false;
