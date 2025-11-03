@@ -72,6 +72,11 @@ export class InteractionManager {
             this.game.mousePositionInWorld = groundPick.pickedPoint;
         }
 
+        if (this.game.gameMode === 'COMBAT') {
+            this.clearTarget(); // Ensure no exploration targets are highlighted
+            return;
+        }
+
         // Raycast from player to find interactable target
         const rayOrigin = this.player.hitbox.position.add(this.player.hitbox.forward.scale(0.5)); // Start ray slightly in front
         const ray = new BABYLON.Ray(rayOrigin, this.player.hitbox.forward, 3);

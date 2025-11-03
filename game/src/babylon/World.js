@@ -65,6 +65,9 @@ export class World {
     }
 
     unlockTile(x, z, withCost = true) {
+        if (this.game.gameMode === 'COMBAT') {
+            return;
+        }
         const key = this.getTileKey(x, z);
         const tile = this.tiles[key];
 
