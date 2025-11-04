@@ -48,6 +48,7 @@ export class World {
         const resourcesToSpawn = [
             { type: 'tree', count: 3 },
             { type: 'rock', count: 2 },
+            { type: 'chest', count: 1 },
         ];
 
         let tileIndex = 0;

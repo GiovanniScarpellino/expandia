@@ -137,8 +137,9 @@ export class BabylonGame {
         const chickPromise = BABYLON.SceneLoader.LoadAssetContainerAsync("./src/models/", "Chicken_Guy.glb", this.scene);
         const npcPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "character-l.glb", this.scene);
         const basePromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/", "Base.glb", this.scene);
+        const chestPromise = BABYLON.SceneLoader.ImportMeshAsync(null, "./src/models/chest/", "chest.glb", this.scene);
 
-        const [rabbitResult, treeResult, rockResult, chickContainer, npcResult, baseResult] = await Promise.all([rabbitPromise, treePromise, rockPromise, chickPromise, npcPromise, basePromise]);
+        const [rabbitResult, treeResult, rockResult, chickContainer, npcResult, baseResult, chestResult] = await Promise.all([rabbitPromise, treePromise, rockPromise, chickPromise, npcPromise, basePromise, chestPromise]);
 
         this.models.player = {
             mesh: rabbitResult.meshes[0],
@@ -151,6 +152,12 @@ export class BabylonGame {
             animationGroups: treeResult.animationGroups
         };
         this.models.tree.mesh.setEnabled(false);
+
+        this.models.chest = {
+            mesh: chestResult.meshes[0],
+            animationGroups: chestResult.animationGroups
+        }
+        this.models.chest.mesh.setEnabled(false);
 
         this.models.rock = {
             mesh: rockResult.meshes[0],
@@ -436,6 +443,8 @@ export class BabylonGame {
         }
         else if (type === 'rock') {
             this.stone += amount;
+        } else if (type === 'chest') {
+            this.gold += amount;
         }
         this.ui.updateResources(this.wood, this.stone, this.gold);
     }

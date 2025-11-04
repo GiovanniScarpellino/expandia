@@ -55,6 +55,8 @@ export class Minimap {
                     ctx.fillStyle = '#2ECC71'; // green
                 } else if (resource.type === 'rock') {
                     ctx.fillStyle = '#95A5A6'; // grey
+                } else if (resource.type === 'chest') {
+                    ctx.fillStyle = '#b8dd11ff';
                 }
                 ctx.fillRect(x - 2, z - 2, 4, 4);
             }

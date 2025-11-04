@@ -43,7 +43,7 @@ export class QuestManager {
         let questAdvanced = false;
         if (actionType === type) {
             if (type === 'collect_resource') {
-                const resourceMap = { tree: 'wood', rock: 'stone' };
+                const resourceMap = { tree: 'wood', rock: 'stone', chest: 'gold' };
                 if (resourceMap[data.type] === resource) {
                     this.currentQuest.progress += data.amount;
                     questAdvanced = true;
