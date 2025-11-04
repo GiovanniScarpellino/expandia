@@ -349,9 +349,13 @@ export class BabylonGame {
 
         const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
         if (shadowGenerator) {
+            // Remove main world objects from shadow map
             shadowGenerator.removeShadowCaster(this.base, true);
             this.resourceManager.resources.forEach(resource => {
                 shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+            });
+            this.buildingManager.chicks.forEach(chick => {
+                shadowGenerator.removeShadowCaster(chick.mesh, true);
             });
         }
 
@@ -377,10 +381,17 @@ export class BabylonGame {
 
         const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
         if (shadowGenerator) {
+            // Add main world objects back to shadow map
             shadowGenerator.addShadowCaster(this.base, true);
             this.resourceManager.resources.forEach(resource => {
-                shadowGenerator.addShadowCaster(resource.visualMesh, true);
+                if (resource.visualMesh.isEnabled()) {
+                    shadowGenerator.addShadowCaster(resource.visualMesh, true);
+                }
             });
+            this.buildingManager.chicks.forEach(chick => {
+                shadowGenerator.addShadowCaster(chick.mesh, true);
+            });
+            shadowGenerator.addShadowCaster(this.player.mesh, true);
         }
 
         if (this.playerReturnPosition) {
