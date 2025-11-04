@@ -525,6 +525,57 @@ export class BabylonGame {
         }
     }
 
+    showDamageNumber(amount, position) {
+        const scene = this.scene;
+        const text = amount.toString();
+
+        // Create a plane for the text
+        const plane = BABYLON.MeshBuilder.CreatePlane("damageTextPlane", { size: 1.5 }, scene);
+        plane.position = position.clone().add(new BABYLON.Vector3(0, 1.5, 0));
+        plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL; // Always face the camera
+        plane.isPickable = false;
+
+        // Create a dynamic texture
+        const texture = new BABYLON.DynamicTexture("damageTexture", { width: 100, height: 100 }, scene, true);
+        
+        // Draw text
+        const font = "bold 50px Arial";
+        texture.drawText(text, null, null, font, "red", "transparent", true);
+
+
+        // Create material
+        const material = new BABYLON.StandardMaterial("damageTextMaterial", scene);
+        material.diffuseTexture = texture;
+        material.diffuseTexture.hasAlpha = true;
+        material.useAlphaFromDiffuseTexture = true;
+        material.emissiveColor = BABYLON.Color3.White();
+        material.disableLighting = true;
+        plane.material = material;
+
+        // Animation
+        const animation = new BABYLON.Animation("damageAnimation", "position.y", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        const keys = [];
+        keys.push({ frame: 0, value: plane.position.y });
+        keys.push({ frame: 30, value: plane.position.y + 2 });
+        animation.setKeys(keys);
+
+        const alphaAnimation = new BABYLON.Animation("damageAlphaAnimation", "material.alpha", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        const alphaKeys = [];
+        alphaKeys.push({ frame: 0, value: 1 });
+        alphaKeys.push({ frame: 15, value: 1 });
+        alphaKeys.push({ frame: 30, value: 0 });
+        alphaAnimation.setKeys(alphaKeys);
+        
+        plane.animations.push(animation);
+        plane.animations.push(alphaAnimation);
+
+        scene.beginAnimation(plane, 0, 30, false, 1, () => {
+            plane.dispose();
+            texture.dispose();
+            material.dispose();
+        });
+    }
+
     gameOver() {
         if (this.gameState === 'GAMEOVER') return;
         this.gameState = 'GAMEOVER';

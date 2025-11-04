@@ -62,6 +62,9 @@ export class ArmoredBug {
         this.health -= amount;
         this.flash();
 
+        // Show damage number
+        this.game.showDamageNumber(amount, this.mesh.position);
+
         if (this.health <= 0) {
             this.dispose();
         }

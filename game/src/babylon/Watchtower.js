@@ -44,7 +44,9 @@ export class Watchtower {
         if (this.isDisposed) return;
 
         this.health -= amount;
-        // Add a flash effect later if needed
+        
+        // Show damage number
+        this.game.showDamageNumber(amount, this.mesh.position);
 
         if (this.health <= 0) {
             this.dispose();
