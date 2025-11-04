@@ -180,6 +180,7 @@ export class UI {
             { id: 'lumberjackChick', name: 'Poussin Bûcheron', description: 'Recrute un poussin bûcheron pour collecter du bois.', action: () => this.game.buildingManager.createLumberjackChick() },
             { id: 'minerChick', name: 'Poussin Mineur', description: 'Recrute un poussin mineur pour collecter de la pierre.', action: () => this.game.buildingManager.createMinerChick() },
             { id: 'explorerChick', name: 'Poussin Explorateur', description: 'Recrute un poussin explorateur pour débloquer de nouvelles tuiles.', action: () => this.game.buildingManager.createExplorerChick() },
+            { id: 'mageChick', name: 'Poussin Mage', description: 'Recrute un poussin mage pour réparer les objets épuisés (coffres, etc.).', action: () => this.game.buildingManager.createMageChick() },
         ];
 
         units.forEach(item => {
@@ -193,6 +194,9 @@ export class UI {
             } else if (item.id === 'explorerChick') {
                 cost = this.game.buildingManager.getExplorerChickCost();
                 costType = 'bois';
+            } else if (item.id === 'mageChick') {
+                cost = this.game.buildingManager.getMageChickCost();
+                costType = 'pierre';
             }
             const costText = `${cost} ${costType}`;
 

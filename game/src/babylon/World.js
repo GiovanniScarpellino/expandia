@@ -217,15 +217,19 @@ export class World {
             tile.metadata.interactable = new Interactable(interactionBox, 3, () => {
                 this.unlockTile(x, z, true);
             }, tile); // Pass the tile itself as the visualMesh
+            this.game.addInteractable(tile.metadata.interactable);
 
         } else if (!shouldBeInteractable && tile.metadata.interactable) {
             // Remove interactable
             if (this.game.interactionManager.currentTarget === tile.metadata.interactable) {
                 this.game.interactionManager.clearTarget();
             }
+            const oldInteractable = tile.metadata.interactable; // Store reference before nulling
             tile.metadata.interactable.mesh.dispose(); // dispose interactionBox
             // No visualMesh disposal needed if it's the tile itself
             tile.metadata.interactable = null;
+            this.game.removeInteractable(oldInteractable); // Remove from central list
+            this.game.removeInteractable(oldInteractable); // Remove from central list
         }
     }
 
@@ -245,9 +249,11 @@ export class World {
                     if (this.game.interactionManager.currentTarget === existingTile.metadata.interactable) {
                         this.game.interactionManager.clearTarget();
                     }
+                    const oldInteractable = existingTile.metadata.interactable; // Store reference before nulling
                     existingTile.metadata.interactable.mesh.dispose();
                     // No visualMesh disposal needed if it's the tile itself
                     existingTile.metadata.interactable = null;
+                    this.game.removeInteractable(oldInteractable); // Remove from central list
                 }
             }
             return existingTile;

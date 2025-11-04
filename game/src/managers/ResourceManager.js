@@ -4,14 +4,16 @@ import { Interactable } from '../babylon/Interactable.js';
 
 // Simple class to hold resource data
 class Resource {
-    constructor(mesh, type, visualMesh = null, keepOnCollect, gain, animation) {
+    constructor(mesh, type, visualMesh = null, keepOnCollect, gain, animation, interactable = null, animationClose = null) {
         this.mesh = mesh;
         this.type = type;
         this.initialPosition = mesh.position.clone();
         this.visualMesh = visualMesh || mesh;
         this.keepOnCollect = keepOnCollect;
         this.gain = gain;
-        this.animation = animation;
+        this.animation = animation; // open animation
+        this.animationClose = animationClose; // close animation
+        this.interactable = interactable;
     }
 }
 
@@ -55,6 +57,10 @@ export class ResourceManager {
             }
         }
 
+        let model;
+        let resource;
+        let newInteractable;
+
         if (typeToSpawn === 'grave') {
             const graveMesh = BABYLON.MeshBuilder.CreateBox("grave", { width: 1, height: 2, depth: 0.5 }, this.scene);
             graveMesh.position = position.clone();
@@ -66,130 +72,131 @@ export class ResourceManager {
             graveMesh.collisionGroup = COLLISION_GROUPS.WALL;
             graveMesh.isPickable = true;
 
-            new Interactable(graveMesh, 2, () => {
-                this.game.startCombat(graveMesh);
+            resource = new Resource(graveMesh, typeToSpawn, graveMesh, false, 0, null);
+            newInteractable = new Interactable(graveMesh, 2, () => {
+                this.game.startCombat(resource);
             });
+            resource.interactable = newInteractable;
+            newInteractable.resource = resource; // Link back
 
             this.game.graves.push(graveMesh);
             this.game.addShadowCaster(graveMesh);
-            return;
-        }
-
-        let model;
-        if (typeToSpawn === 'tree') {
-            model = this.game.models.tree;
-        } else if (typeToSpawn === 'rock') {
-            model = this.game.models.rock;
-        } else if (typeToSpawn === 'chest') {
-            model = this.game.models.chest;
-        }
-
-        if (model) {
-            let resource;
-            let interactableMesh;
-            let visualMesh;
-
-            if (typeToSpawn === 'rock') {
-                const rockMesh = model.mesh.clone(`rock-visual-${this.resources.length}`);
-                rockMesh.setEnabled(true);
-                rockMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
-
-                const collisionBox = BABYLON.MeshBuilder.CreateBox(`rock-collision-${this.resources.length}`, { width: 0.8, height: 0.8, depth: 0.8 }, this.scene);
-                collisionBox.position = position.clone();
-                collisionBox.position.y = 0.4;
-                collisionBox.isVisible = false;
-                collisionBox.checkCollisions = true;
-                collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
-                collisionBox.isPickable = true;
-
-                rockMesh.parent = collisionBox;
-                rockMesh.position.y = -0.4;
-
-                this.game.addShadowCaster(rockMesh);
-                resource = new Resource(collisionBox, typeToSpawn, rockMesh, false, 1);
-                interactableMesh = collisionBox;
-                visualMesh = rockMesh;
+        } else {
+            if (typeToSpawn === 'tree') {
+                model = this.game.models.tree;
+            } else if (typeToSpawn === 'rock') {
+                model = this.game.models.rock;
             } else if (typeToSpawn === 'chest') {
-                // Clone mesh visuel
-                const chestMesh = model.mesh.clone(`chest-visual-${this.resources.length}`);
-                chestMesh.setEnabled(true);
-                chestMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
-                chestMesh.rotation = new BABYLON.Vector3(0, Math.PI * 2, 0);
-
-                // Clone skeleton si il y en a un
-                if (model.mesh.skeleton) {
-                    chestMesh.skeleton = model.mesh.skeleton.clone(`skeleton-chest-${this.resources.length}`);
-                }
-
-                // Collision box
-                const collisionBox = BABYLON.MeshBuilder.CreateBox(
-                    `chest-collision-${this.resources.length}`,
-                    { width: 0.8, height: 0.8, depth: 0.8 },
-                    this.scene
-                );
-                collisionBox.position = position.clone();
-                collisionBox.position.y = 0.4;
-                collisionBox.isVisible = false;
-                collisionBox.checkCollisions = true;
-                collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
-                collisionBox.isPickable = true;
-
-                chestMesh.parent = collisionBox;
-                chestMesh.position.y = -0.4;
-
-                this.game.addShadowCaster(chestMesh);
-
-                // Clone animation group
-                const originalAnim = model.animationGroups.find(aG => aG.name === 'open');
-                const clonedAnimGroup = originalAnim.clone(`openClone-${this.resources.length}`);
-
-                // Retarget animations vers le mesh cloné
-                clonedAnimGroup.targetedAnimations.forEach((ta) => {
-                    const origName = ta.target.name; // "lid"
-
-                    // Construire le nom du node dans le clone
-                    const expectedName = `${chestMesh.name}.chest.${origName}`;
-
-                    // Essayer de trouver ce node
-                    let cloneTarget = this.scene.getNodeByName(expectedName);
-
-                    // Si non trouvé, fallback pour trouver un "lid" dans les enfants du clone
-                    if (!cloneTarget) {
-                        cloneTarget = chestMesh.getChildMeshes(false, m => m.name.endsWith(`.${origName}`))[0];
-                    }
-
-                    if (!cloneTarget) {
-                        console.warn("Impossible de remapper", origName, "dans", chestMesh.name);
-                    } else {
-                        ta.target = cloneTarget;
-                    }
-                });
-
-                resource = new Resource(collisionBox, typeToSpawn, chestMesh, true, 10, clonedAnimGroup);
-                interactableMesh = collisionBox;
-                visualMesh = chestMesh;
-            } else { // For trees and other resources
-                const newMesh = model.mesh.clone(`${typeToSpawn}-${this.resources.length}`);
-                newMesh.position = position.clone();
-                newMesh.setEnabled(true);
-                newMesh.isPickable = true;
-
-                newMesh.getChildMeshes().forEach(m => {
-                    m.checkCollisions = true;
-                    m.collisionGroup = COLLISION_GROUPS.WALL;
-                });
-
-                this.game.addShadowCaster(newMesh);
-                resource = new Resource(newMesh, typeToSpawn, newMesh, false, 1);
-                interactableMesh = newMesh;
-                visualMesh = newMesh;
+                model = this.game.models.chest;
             }
 
-            this.resources.push(resource);
+            if (model) {
+                if (typeToSpawn === 'rock') {
+                    const rockMesh = model.mesh.clone(`rock-visual-${this.resources.length}`);
+                    rockMesh.setEnabled(true);
+                    rockMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
 
-            new Interactable(interactableMesh, 2, () => {
-                this.game.player.startHarvesting(resource);
-            }, visualMesh);
+                    const collisionBox = BABYLON.MeshBuilder.CreateBox(`rock-collision-${this.resources.length}`, { width: 0.8, height: 0.8, depth: 0.8 }, this.scene);
+                    collisionBox.position = position.clone();
+                    collisionBox.position.y = 0.4;
+                    collisionBox.isVisible = false;
+                    collisionBox.checkCollisions = true;
+                    collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
+                    collisionBox.isPickable = true;
+
+                    rockMesh.parent = collisionBox;
+                    rockMesh.position.y = -0.4;
+
+                    this.game.addShadowCaster(rockMesh);
+                    
+                    resource = new Resource(collisionBox, typeToSpawn, rockMesh, false, 1, null);
+                    newInteractable = new Interactable(collisionBox, 2, () => {
+                        this.game.player.startHarvesting(resource);
+                    }, rockMesh);
+                    resource.interactable = newInteractable;
+                    newInteractable.resource = resource; // Link back
+                } else if (typeToSpawn === 'chest') {
+                    const chestMesh = model.mesh.clone(`chest-visual-${this.resources.length}`);
+                    chestMesh.setEnabled(true);
+                    chestMesh.getChildMeshes().forEach(m => m.checkCollisions = false);
+                    chestMesh.rotation = new BABYLON.Vector3(0, Math.PI * 2, 0);
+
+                    if (model.mesh.skeleton) {
+                        chestMesh.skeleton = model.mesh.skeleton.clone(`skeleton-chest-${this.resources.length}`);
+                    }
+
+                    const collisionBox = BABYLON.MeshBuilder.CreateBox(`chest-collision-${this.resources.length}`, { width: 0.8, height: 0.8, depth: 0.8 }, this.scene);
+                    collisionBox.position = position.clone();
+                    collisionBox.position.y = 0.4;
+                    collisionBox.isVisible = false;
+                    collisionBox.checkCollisions = true;
+                    collisionBox.collisionGroup = COLLISION_GROUPS.WALL;
+                    collisionBox.isPickable = true;
+
+                    chestMesh.parent = collisionBox;
+                    chestMesh.position.y = -0.4;
+
+                    this.game.addShadowCaster(chestMesh);
+
+                    // Clone open animation
+                    const openAnim = model.animationGroups.find(aG => aG.name === 'open').clone(`openClone-${this.resources.length}`);
+                    openAnim.targetedAnimations.forEach((ta) => {
+                        const target = chestMesh.getChildMeshes(false, m => m.name.endsWith(ta.target.name.split('.').pop()))[0];
+                        if(target) ta.target = target;
+                    });
+
+                    // Clone close animation
+                    let closeAnim = null;
+                    const closeAnimOrig = model.animationGroups.find(aG => aG.name === 'close');
+                    if (closeAnimOrig) {
+                        closeAnim = closeAnimOrig.clone(`closeClone-${this.resources.length}`);
+                        closeAnim.targetedAnimations.forEach((ta) => {
+                            const target = chestMesh.getChildMeshes(false, m => m.name.endsWith(ta.target.name.split('.').pop()))[0];
+                            if(target) ta.target = target;
+                        });
+                    }
+
+                    resource = new Resource(collisionBox, typeToSpawn, chestMesh, true, 10, openAnim, null, closeAnim);
+                    newInteractable = new Interactable(collisionBox, 2, () => {
+                        this.game.player.startHarvesting(resource);
+                    }, chestMesh);
+                    resource.interactable = newInteractable;
+                    newInteractable.resource = resource; // Link back
+
+                    // Ensure chest is closed at spawn
+                    if (resource.animationClose) {
+                        resource.animationClose.play(false);
+                    } else if (resource.animation) {
+                        resource.animation.start(false, -1.0, resource.animation.to, resource.animation.from, false);
+                    }
+                } else { // For trees
+                    const newMesh = model.mesh.clone(`${typeToSpawn}-${this.resources.length}`);
+                    newMesh.position = position.clone();
+                    newMesh.setEnabled(true);
+                    newMesh.isPickable = true;
+
+                    newMesh.getChildMeshes().forEach(m => {
+                        m.checkCollisions = true;
+                        m.collisionGroup = COLLISION_GROUPS.WALL;
+                    });
+
+                    this.game.addShadowCaster(newMesh);
+                    
+                    resource = new Resource(newMesh, typeToSpawn, newMesh, false, 1, null);
+                    newInteractable = new Interactable(newMesh, 2, () => {
+                        this.game.player.startHarvesting(resource);
+                    }, newMesh);
+                    resource.interactable = newInteractable;
+                    newInteractable.resource = resource; // Link back
+                }
+            }
+        }
+
+        if (resource) {
+            this.resources.push(resource);
+            if (newInteractable) {
+                this.game.addInteractable(newInteractable);
+            }
         }
     }
 
@@ -199,7 +206,15 @@ export class ResourceManager {
             const item = this.respawnQueue[i];
             if (now >= item.respawnTime) {
                 const resource = item.resource;
+
+                // Re-enable the main mesh (the collision box for rocks)
                 resource.mesh.setEnabled(true);
+
+                if (resource.interactable) {
+                    resource.interactable.reset(); // This will re-enable the visual mesh
+                }
+                
+                // Re-enable collisions
                 if (resource.type === 'rock') {
                     resource.mesh.checkCollisions = true;
                 }
@@ -214,15 +229,19 @@ export class ResourceManager {
     harvestResource(resource) {
         if (resource && resource.mesh.isEnabled()) {
             if (resource.type === 'chest') {
-                if (resource.mesh.interactable) {
+                if (resource.interactable) {
                     if (resource.animation) {
                         resource.animation.play(false);
                     }
                     this.game.addResource(resource.type, resource.gain);
                     this.game.addScore(1, 'exploration');
-                    resource.mesh.interactable = null; // Make it non-interactable
+                    resource.interactable.deplete(); // Mark as depleted
                 }
                 return; // Chests are not disabled or put in respawn queue
+            }
+
+            if (resource.interactable) {
+                resource.interactable.deplete(); // Mark as depleted
             }
 
             resource.mesh.setEnabled(!!resource.keepOnCollect);

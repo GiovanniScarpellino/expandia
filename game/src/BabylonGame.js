@@ -65,6 +65,7 @@ export class BabylonGame {
         this.combatCount = 0;
         this.hasMinimap = false;
         this.isMapLarge = false;
+        this.interactables = []; // Central list for all interactable objects
 
         this.ui = new UI(this);
 
@@ -300,9 +301,10 @@ export class BabylonGame {
         interactionBox.isVisible = false;
 
         // Attach interactable to the interaction box, but highlight the visual model
-        new Interactable(interactionBox, 5, () => {
+        const baseInteractable = new Interactable(interactionBox, 5, () => {
             this.ui.showBaseShopScreen();
         }, this.base);
+        this.addInteractable(baseInteractable); // Add to central list
 
         // Base physics collision box
         const collisionBox = BABYLON.MeshBuilder.CreateBox("baseCollision", {
@@ -340,7 +342,7 @@ export class BabylonGame {
         });
     }
 
-    startCombat(grave) {
+    startCombat(resource) {
         if (this.gameMode === 'COMBAT') return;
         this.combatCount++;
         console.log(`Starting combat... Combat count: ${this.combatCount}`);
@@ -353,12 +355,11 @@ export class BabylonGame {
             });
         }
 
-        if (grave) {
-            const index = this.graves.indexOf(grave);
-            if (index > -1) {
-                this.graves.splice(index, 1);
+        if (resource && resource.type === 'grave') {
+            if (resource.interactable) {
+                resource.interactable.deplete();
             }
-            grave.dispose();
+            resource.mesh.setEnabled(false); // Make it invisible instead of disposing
         }
 
         this.playerReturnPosition = this.player.hitbox.position.clone();
@@ -469,6 +470,17 @@ export class BabylonGame {
         const multiplier = category === 'combat' ? this.combatMultiplier : this.explorationMultiplier;
         this.score += baseAmount * multiplier;
         this.ui.updateScore(this.score);
+    }
+
+    addInteractable(interactable) {
+        this.interactables.push(interactable);
+    }
+
+    removeInteractable(interactable) {
+        const index = this.interactables.indexOf(interactable);
+        if (index > -1) {
+            this.interactables.splice(index, 1);
+        }
     }
 
     addShadowCaster(mesh) {

@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { LumberjackChick } from '../babylon/LumberjackChick.js';
 import { MinerChick } from '../babylon/MinerChick.js';
 import { ExplorerChick } from '../babylon/ExplorerChick.js';
+import { MageChick } from '../babylon/MageChick.js';
 
 export class BuildingManager {
     constructor(game) {
@@ -11,6 +12,7 @@ export class BuildingManager {
         this.baseLumberjackCost = 10;
         this.baseMinerCost = 10;
         this.baseExplorerCost = 20;
+        this.baseMageChickCost = 0; // New: Base cost for Mage Chick (set to 0 for testing)
         this.costFactor = 1.5;
     }
 
@@ -27,6 +29,11 @@ export class BuildingManager {
     getExplorerChickCost() {
         const explorerChicks = this.chicks.filter(chick => chick instanceof ExplorerChick).length;
         return Math.round(this.baseExplorerCost * Math.pow(this.costFactor, explorerChicks));
+    }
+
+    getMageChickCost() {
+        const mageChicks = this.chicks.filter(chick => chick instanceof MageChick).length;
+        return Math.round(this.baseMageChickCost * Math.pow(this.costFactor, mageChicks));
     }
 
     createLumberjackChick() {
@@ -65,6 +72,20 @@ export class BuildingManager {
             const chick = new ExplorerChick(this.game, spawnPosition);
             this.chicks.push(chick);
             this.game.addScore(50, 'exploration');
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    createMageChick() {
+        const cost = this.getMageChickCost();
+        if (this.game.stone >= cost) { // Mage Chick uses stone
+            this.game.addResource('rock', -cost);
+            const spawnPosition = this.game.base.position.add(new BABYLON.Vector3(-4, 0, -2)); // Different spawn position
+            const chick = new MageChick(this.game, spawnPosition);
+            this.chicks.push(chick);
+            this.game.addScore(30, 'exploration'); // Adjust score as needed
             return true;
         } else {
             return false;
