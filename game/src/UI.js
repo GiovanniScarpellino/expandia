@@ -46,6 +46,7 @@ export class UI {
         this.pauseLumberjackButton = document.getElementById('pause-lumberjack-button');
         this.pauseMinerButton = document.getElementById('pause-miner-button');
         this.pauseExplorerButton = document.getElementById('pause-explorer-button');
+        this.pauseMageButton = document.getElementById('pause-mage-button');
 
         // Initial state
         this.updateHealth(100, 100);
@@ -68,6 +69,10 @@ export class UI {
         });
         this.pauseExplorerButton.addEventListener('click', () => {
             this.game.toggleChicksPause('EXPLORER');
+            this.updatePauseButtons();
+        });
+        this.pauseMageButton.addEventListener('click', () => {
+            this.game.toggleChicksPause('MAGE');
             this.updatePauseButtons();
         });
     }
@@ -93,6 +98,13 @@ export class UI {
         } else {
             this.pauseExplorerButton.innerText = 'Pause Explorateurs';
             this.pauseExplorerButton.classList.remove('paused');
+        }
+        if (this.game.chickPauseState['MAGE']) {
+            this.pauseMageButton.innerText = 'Play Mages';
+            this.pauseMageButton.classList.add('paused');
+        } else {
+            this.pauseMageButton.innerText = 'Pause Mages';
+            this.pauseMageButton.classList.remove('paused');
         }
     }
 

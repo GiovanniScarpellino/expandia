@@ -12,7 +12,7 @@ export class BuildingManager {
         this.baseLumberjackCost = 10;
         this.baseMinerCost = 10;
         this.baseExplorerCost = 20;
-        this.baseMageChickCost = 0; // New: Base cost for Mage Chick (set to 0 for testing)
+        this.baseMageChickCost = 20;
         this.costFactor = 1.5;
     }
 

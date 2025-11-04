@@ -50,6 +50,7 @@ export class BabylonGame {
             'LUMBERJACK': false,
             'MINER': false,
             'EXPLORER': false,
+            'MAGE': false,
         };
         this.mousePositionInWorld = BABYLON.Vector3.Zero();
 
