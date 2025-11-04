@@ -9,7 +9,7 @@ export class UpgradeManager {
                 description: "Augmente l'or gagné à la fin des combats de 2%.",
                 cost: [100, 250, 500],
                 costType: 'gold',
-                maxLevel: 3,
+                maxLevel: Infinity,
                 isImplemented: true,
             },
             artOfWar: {
@@ -17,7 +17,7 @@ export class UpgradeManager {
                 description: "Augmente le multiplicateur de score en combat de 0.1.",
                 cost: [150, 300, 600],
                 costType: 'gold',
-                maxLevel: 3,
+                maxLevel: Infinity,
                 isImplemented: true,
             },
             pioneer: {
@@ -25,7 +25,7 @@ export class UpgradeManager {
                 description: "Augmente le multiplicateur de score d'exploration de 0.1.",
                 cost: [100, 200, 400],
                 costType: 'gold',
-                maxLevel: 3,
+                maxLevel: Infinity,
                 isImplemented: true,
             },
             multiTileUnlock: {
@@ -121,7 +121,16 @@ export class UpgradeManager {
         const upgrade = this.upgrades[upgradeId];
         const currentLevel = this.getUpgradeLevel(upgradeId);
         if (currentLevel >= upgrade.maxLevel) return Infinity;
-        return upgrade.cost[currentLevel];
+
+        if (currentLevel < upgrade.cost.length) {
+            return upgrade.cost[currentLevel];
+        } else {
+            // For infinite upgrades, calculate cost based on the last cost
+            const lastCost = upgrade.cost[upgrade.cost.length - 1];
+            const costMultiplier = 1.5; // Or some other factor
+            // Calculate the cost for the levels beyond the array
+            return Math.floor(lastCost * Math.pow(costMultiplier, currentLevel - (upgrade.cost.length - 1)));
+        }
     }
 
     buyUpgrade(upgradeId) {

@@ -1,3 +1,8 @@
+import { LumberjackChick } from './babylon/LumberjackChick.js';
+import { MinerChick } from './babylon/MinerChick.js';
+import { ExplorerChick } from './babylon/ExplorerChick.js';
+import { MageChick } from './babylon/MageChick.js';
+
 export class UI {
     constructor(game) {
         this.game = game;
@@ -219,8 +224,18 @@ export class UI {
             itemInfo.className = 'item-info';
             itemDiv.appendChild(itemInfo);
 
+            let currentCount = 0;
+            if (item.id === 'lumberjackChick') {
+                currentCount = this.game.buildingManager.chicks.filter(chick => chick instanceof LumberjackChick).length;
+            } else if (item.id === 'minerChick') {
+                currentCount = this.game.buildingManager.chicks.filter(chick => chick instanceof MinerChick).length;
+            } else if (item.id === 'explorerChick') {
+                currentCount = this.game.buildingManager.chicks.filter(chick => chick instanceof ExplorerChick).length;
+            } else if (item.id === 'mageChick') {
+                currentCount = this.game.buildingManager.chicks.filter(chick => chick instanceof MageChick).length;
+            }
             const itemName = document.createElement('h4');
-            itemName.innerText = item.name;
+            itemName.innerHTML = `${item.name} <span>(Possédé: ${currentCount})</span>`;
             itemInfo.appendChild(itemName);
 
             const itemDescription = document.createElement('p');
@@ -235,8 +250,20 @@ export class UI {
             costSpan.innerText = `Coût: ${costText}`;
             shopAction.appendChild(costSpan);
 
+            let actualResourceAmount;
+            if (costType === 'bois') {
+                actualResourceAmount = this.game.wood;
+            } else if (costType === 'pierre') {
+                actualResourceAmount = this.game.stone;
+            } else {
+                actualResourceAmount = 0;
+            }
+
+            const canAfford = actualResourceAmount >= cost;
+
             const buyButton = document.createElement('button');
             buyButton.innerText = 'Acheter';
+            buyButton.disabled = !canAfford;
             shopAction.appendChild(buyButton);
 
             buyButton.addEventListener('click', () => {
@@ -295,9 +322,11 @@ export class UI {
             costSpan.innerText = `Coût: ${costText}`;
             shopAction.appendChild(costSpan);
 
+            const canAfford = this.game[upgrade.costType] >= cost;
+
             const buyButton = document.createElement('button');
             buyButton.innerText = 'Acheter';
-            if (cost === Infinity) {
+            if (cost === Infinity || !canAfford) {
                 buyButton.disabled = true;
             }
             shopAction.appendChild(buyButton);
