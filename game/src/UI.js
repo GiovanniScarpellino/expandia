@@ -33,6 +33,9 @@ export class UI {
         this.permProjSize = document.getElementById('perm-proj-size');
         this.permCombatMult = document.getElementById('perm-combat-mult');
         this.permExploMult = document.getElementById('perm-explo-mult');
+        this.permWalkSpeed = document.getElementById('perm-walk-speed');
+        this.permHealth = document.getElementById('perm-health');
+        this.permMaxHealth = document.getElementById('perm-max-health');
 
         // Overlay screens
         this.gameOverScreen = document.getElementById('game-over-screen');
@@ -125,21 +128,6 @@ export class UI {
         // Clear previous cards
         this.upgradeCardsContainer.innerHTML = '';
 
-        // Player stats
-        const player = this.game.player;
-        const statsContainer = document.getElementById('player-stats-container');
-        statsContainer.innerHTML = `
-            <h3>Statistiques Actuelles</h3>
-            <ul>
-                <li><strong>PV Max:</strong> ${player.maxHealth}</li>
-                <li><strong>Vitesse d'Attaque:</strong> ${(1000 / player.attackSpeed).toFixed(2)}/s</li>
-                <li><strong>Vitesse Projectiles:</strong> ${player.projectileSpeedModifier.toFixed(2)}x</li>
-                <li><strong>Dégâts:</strong> ${player.projectileDamage}</li>
-                <li><strong>Nb. Projectiles:</strong> ${player.projectileCount}</li>
-                <li><strong>Taille Projectiles:</strong> ${player.projectileSizeModifier.toFixed(2)}x</li>
-            </ul>
-        `;
-
         // Create new cards
         upgrades.forEach(upgrade => {
             const card = document.createElement('div');
@@ -152,10 +140,12 @@ export class UI {
         });
 
         this.levelUpScreen.style.display = 'flex';
+        document.getElementById('permanent-player-stats').classList.add('highlighted');
     }
 
     hideLevelUpScreen() {
         this.levelUpScreen.style.display = 'none';
+        document.getElementById('permanent-player-stats').classList.remove('highlighted');
     }
 
     showBaseShopScreen() {
@@ -468,6 +458,12 @@ export class UI {
 
     updatePermanentStats(player) {
         if (!player) return;
+        if (this.permHealth) {
+            this.permHealth.innerText = player.health;
+        }
+        if (this.permMaxHealth) {
+            this.permMaxHealth.innerText = player.maxHealth;
+        }
         if (this.permAttackSpeed) {
             this.permAttackSpeed.innerText = `${(1000 / player.attackSpeed).toFixed(2)}/s`;
         }
@@ -482,6 +478,9 @@ export class UI {
         }
         if (this.permProjSize) {
             this.permProjSize.innerText = `${player.projectileSizeModifier.toFixed(2)}x`;
+        }
+        if (this.permWalkSpeed) {
+            this.permWalkSpeed.innerText = `${player.walkSpeed.toFixed(2)}x`;
         }
         this.updateMultipliers(this.game.combatMultiplier, this.game.explorationMultiplier);
     }

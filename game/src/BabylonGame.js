@@ -85,6 +85,11 @@ export class BabylonGame {
                 }
             },
             {
+                name: "Vitesse de Déplacement +",
+                description: "Augmente la vitesse de déplacement de 10%.",
+                apply: (player) => { player.walkSpeed *= 1.10; }
+            },
+            {
                 name: "Cadence de Tir +",
                 description: "Augmente la vitesse d'attaque de 5%.",
                 apply: (player) => { player.attackSpeed *= 0.95; }
