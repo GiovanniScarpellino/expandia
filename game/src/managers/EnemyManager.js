@@ -13,10 +13,16 @@ export class EnemyManager {
     }
 
     start(arenaCenter, combatCount) {
-        this.arenaCenter = arenaCenter;
-        this.currentCombatConfig = this.generateCombatConfig(combatCount);
-        this.spawnEnemies();
+        const config = this.generateCombatConfig(combatCount);
+        this.startWithConfig(arenaCenter, config);
         console.log(`EnemyManager started for arena combat. Difficulty: ${combatCount}`);
+    }
+
+    startWithConfig(arenaCenter, config) {
+        this.arenaCenter = arenaCenter;
+        this.currentCombatConfig = config;
+        this.enemies = []; // Ensure enemies array is clean before spawn
+        this.spawnEnemies();
     }
 
     stop() {
@@ -45,14 +51,25 @@ export class EnemyManager {
     }
 
     generateCombatConfig(combatCount) {
-        const bugCount = 10 + combatCount * 5;
-        const armoredBugCount = combatCount * 2;
-        const watchtowerCount = Math.floor(combatCount / 3);
+        // Base values
+        const baseBugCount = 10 + combatCount * 5;
+        const baseArmoredBugCount = combatCount * 2;
+        const baseWatchtowerCount = Math.floor(combatCount / 3);
+        const baseHealthMultiplier = 1 + (combatCount - 1) * 0.2;
+        const baseDamageMultiplier = 1 + (combatCount - 1) * 0.1;
+        const baseGoldReward = 50 + (combatCount - 1) * 25;
 
-        const healthMultiplier = 1 + (combatCount - 1) * 0.2;
-        const damageMultiplier = 1 + (combatCount - 1) * 0.1;
+        // Randomness factor (+/- 20%)
+        const randomness = () => 0.8 + Math.random() * 0.4;
 
-        const goldReward = 50 + (combatCount - 1) * 25;
+        // Randomized values
+        const bugCount = Math.floor(baseBugCount * randomness());
+        const armoredBugCount = Math.floor(baseArmoredBugCount * randomness());
+        const watchtowerCount = Math.floor(baseWatchtowerCount * randomness());
+        const healthMultiplier = baseHealthMultiplier * randomness();
+        const damageMultiplier = baseDamageMultiplier * randomness();
+        const goldReward = Math.floor(baseGoldReward * randomness());
+
 
         return {
             bug: bugCount,

@@ -464,3 +464,42 @@ canvas {
     border: 2px solid #fff;
     background-color: rgba(0, 0, 0, 0.7);
 }
+
+/* --- Combat Preview Screen --- */
+#combat-preview-screen .overlay-content h1 {
+    color: #e74c3c; /* Red for combat */
+}
+
+#combat-preview-details {
+    margin: 30px 0;
+    font-size: 1.2em;
+    text-align: left;
+    display: inline-block;
+}
+
+#combat-preview-details p {
+    margin: 10px 0;
+}
+
+#combat-preview-details span {
+    font-weight: bold;
+    color: #f1c40f; /* Yellow for values */
+}
+
+#combat-preview-screen .button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+#combat-preview-screen button {
+    font-size: 1.1em;
+}
+
+#flee-button {
+    background-color: #7f8c8d; /* Gray for flee */
+}
+
+#flee-button:hover {
+    background-color: #95a5a6;
+}

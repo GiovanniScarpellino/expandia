@@ -73,6 +73,8 @@ export class BabylonGame {
         // Combat Arena
         this.arenaCenter = new BABYLON.Vector3(0, 0, 0); // Will be updated in createScene
         this.playerReturnPosition = null;
+        this.pendingCombatResource = null;
+        this.pendingCombatConfig = null;
 
         // Upgrade Pool
         this.upgradePool = [
@@ -350,21 +352,34 @@ export class BabylonGame {
 
     startCombat(resource) {
         if (this.gameMode === 'COMBAT') return;
+
+        this.pendingCombatResource = resource;
+        const nextCombatCount = this.combatCount + 1;
+        this.pendingCombatConfig = this.enemyManager.generateCombatConfig(nextCombatCount);
+
+        this.ui.showCombatPreview(this.pendingCombatConfig, nextCombatCount);
+    }
+
+    proceedToCombat() {
+        if (this.gameMode === 'COMBAT' || !this.pendingCombatConfig) return;
+
         this.combatCount++;
+        this.gameState = 'RUNNING';
         console.log(`Starting combat... Combat count: ${this.combatCount}`);
 
         const shadowGenerator = this.scene.getLightByName("dirLight").getShadowGenerator();
         if (shadowGenerator) {
             // Remove main world objects from shadow map
             shadowGenerator.removeShadowCaster(this.base, true);
-            this.resourceManager.resources.forEach(resource => {
-                shadowGenerator.removeShadowCaster(resource.visualMesh, true);
+            this.resourceManager.resources.forEach(res => { // Changed variable name to avoid conflict
+                shadowGenerator.removeShadowCaster(res.visualMesh, true);
             });
             this.buildingManager.chicks.forEach(chick => {
                 shadowGenerator.removeShadowCaster(chick.mesh, true);
             });
         }
 
+        const resource = this.pendingCombatResource;
         if (resource && resource.type === 'grave') {
             if (resource.interactable) {
                 resource.interactable.deplete();
@@ -376,9 +391,13 @@ export class BabylonGame {
         this.player.hitbox.position = this.arenaCenter.clone();
 
         this.gameMode = 'COMBAT';
-        this.enemyManager.start(this.arenaCenter, this.combatCount);
-        this.ui.updateWaveStats(this.enemyManager.waveNumber, 0);
+        this.enemyManager.startWithConfig(this.arenaCenter, this.pendingCombatConfig); // New method
+        this.ui.updateWaveStats(1, this.enemyManager.enemies.length);
         this.ui.updateMinimapHintVisibility();
+
+        // Clear pending data
+        this.pendingCombatResource = null;
+        this.pendingCombatConfig = null;
     }
 
     endCombat() {

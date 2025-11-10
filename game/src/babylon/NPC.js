@@ -71,6 +71,9 @@ export class NPC {
                 case 'MOVING_TO_RESOURCE':
                     // Check if target is still valid
                     if (!this.target || !this.target.mesh || !this.target.mesh.isEnabled()) {
+                        if (this.target && this.target.mesh && this.target.mesh.metadata) {
+                            this.target.mesh.metadata.isTargeted = false; // Release the target
+                        }
                         this.state = 'IDLE';
                         this.path = [];
                         this.target = null;

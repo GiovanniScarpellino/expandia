@@ -56,6 +56,14 @@ export class UI {
         this.pauseExplorerButton = document.getElementById('pause-explorer-button');
         this.pauseMageButton = document.getElementById('pause-mage-button');
 
+        // Combat Preview Screen
+        this.combatPreviewScreen = document.getElementById('combat-preview-screen');
+        this.combatDifficulty = document.getElementById('combat-difficulty');
+        this.combatEnemies = document.getElementById('combat-enemies');
+        this.combatReward = document.getElementById('combat-reward');
+        this.fightButton = document.getElementById('fight-button');
+        this.fleeButton = document.getElementById('flee-button');
+
         // Initial state
         this.updateHealth(100, 100);
         this.updateXpBar(0, 100, 1);
@@ -82,6 +90,15 @@ export class UI {
         this.pauseMageButton.addEventListener('click', () => {
             this.game.toggleChicksPause('MAGE');
             this.updatePauseButtons();
+        });
+
+        this.fleeButton.addEventListener('click', () => {
+            this.hideCombatPreview();
+            this.game.gameState = 'RUNNING'; // Resume game if fleeing
+        });
+        this.fightButton.addEventListener('click', () => {
+            this.hideCombatPreview();
+            this.game.proceedToCombat(); // Let this method handle game state
         });
     }
 
@@ -489,5 +506,31 @@ export class UI {
         if (this.minimapHint) {
             this.minimapHint.style.display = this.game.hasMinimap && this.game.gameMode !== 'COMBAT' ? 'block' : 'none';
         }
+    }
+
+    showCombatPreview(config, combatCount) {
+        const totalEnemies = config.bug + config.armoredBug + config.watchtower;
+
+        let difficulty = "Facile";
+        if (combatCount >= 10) {
+            difficulty = "Cauchemar";
+        } else if (combatCount >= 7) {
+            difficulty = "Très Difficile";
+        } else if (combatCount >= 4) {
+            difficulty = "Difficile";
+        } else if (combatCount >= 2) {
+            difficulty = "Normal";
+        }
+
+        this.combatDifficulty.innerText = difficulty;
+        this.combatEnemies.innerText = `~${totalEnemies}`;
+        this.combatReward.innerText = `${config.reward.gold} Or`;
+
+        this.combatPreviewScreen.style.display = 'flex';
+        this.game.gameState = 'PAUSED';
+    }
+
+    hideCombatPreview() {
+        this.combatPreviewScreen.style.display = 'none';
     }
 }
